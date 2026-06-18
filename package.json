@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "sharp": "^0.35.1"
+  },
+  "name": "html_metronome",
+  "version": "1.0.0",
+  "description": "",
+  "main": "generate-icons.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

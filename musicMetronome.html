@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#030810">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BeatStride — Music</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+
+/* ── Body: full screen on mobile, centers card on desktop ── */
+body{
+  min-height:100svh;
+  background:linear-gradient(to bottom,#0a100d,#000);
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  font-family:'Segoe UI','Inter',system-ui,sans-serif;
+  overflow-y:auto;
+  padding:0;
+}
+
+/* ── Main card: full screen on mobile, floating on desktop ── */
+.main-mode{
+  width:100%;
+  height:100svh;
+  display:flex;
+  flex-direction:column;
+  background:rgba(8,12,10,.74);
+  backdrop-filter:blur(24px);
+  border-radius:0;
+  border:none;
+  box-shadow:none;
+  overflow:hidden;
+  padding-bottom:max(24px, env(safe-area-inset-bottom));
+}
+
+/* ── Scrollable content area — everything ABOVE transport bar ── */
+.main-mode-scroll{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:none;
+  padding:16px 18px 12px;
+  display:flex;
+  flex-direction:column;
+}
+.main-mode-scroll::-webkit-scrollbar{display:none;}
+
+/* Desktop: restore floating card look */
+@media(min-width:500px){
+  body{
+    padding:24px 20px;
+    align-items:center;
+    overflow-y:auto;
+  }
+  .main-mode{
+    width:min(560px,96vw);
+    height:auto;
+    min-height:unset;
+    border-radius:36px;
+    border:1px solid rgba(0,255,120,.22);
+    box-shadow:0 30px 60px rgba(0,0,0,.5),inset 0 1px 1px rgba(255,255,255,.07);
+    overflow:hidden;
+    padding:22px 24px 0;
+  }
+  .main-mode-scroll{
+    overflow:visible;
+    padding:0;
+    min-height:unset;
+    flex:none;
+  }
+  .transport-wrap{
+    margin:12px -24px 0;
+    padding:0 24px 20px;
+    border-top:1px solid rgba(255,255,255,.06);
+    padding-top:12px;
+  }
+  .lower-control{
+    border-radius:0 0 36px 36px;
+  }
+}
+
+/* Top bar */
+.top-setting{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:14px;flex-shrink:0;}
+.top-title{font-size:1.1rem;font-weight:600;letter-spacing:-.3px;background:linear-gradient(135deg,#fff,#8affc2);-webkit-background-clip:text;background-clip:text;color:transparent;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-icon-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:rgba(255,255,255,.6);transition:background .2s,color .2s;text-decoration:none;flex-shrink:0;margin-right:4px;}
+@media(hover:hover){.nav-icon-btn:hover{background:rgba(255,255,255,.08);color:white;border-color:rgba(255,255,255,.2);}}
+.dash-icon-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:rgba(255,255,255,.6);transition:background .2s,color .2s;text-decoration:none;flex-shrink:0;margin-left:4px;}
+@media(hover:hover){.dash-icon-btn:hover{background:rgba(255,255,255,.08);color:white;border-color:rgba(255,255,255,.2);}}
+
+/* Beat visualiser */
+.beat-visualiser{background:rgba(0,0,0,.38);border-radius:20px;border:1px solid rgba(255,255,255,.07);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-shrink:1;}
+.pulse-wrap{position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:visible;}
+.pulse-ring{position:absolute;inset:0;border-radius:50%;border:2.5px solid #2ecc71;opacity:0;transform:scale(1);pointer-events:none;will-change:transform,opacity;}
+.pulse-ring.flash{animation:ringFlash .35s ease-out forwards;}
+@keyframes ringFlash{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
+#pulseSvg{overflow:visible;will-change:transform;}
+#greenPulseCircle{transition:transform 0.05s ease-out;transform-origin:center;}
+.beat-info{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;}
+.beat-stats-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.stat-pill{background:rgba(0,0,0,.5);padding:2px 10px;border-radius:40px;font-family:monospace;font-size:.78rem;color:#9effcf;letter-spacing:1px;border:1px solid rgba(46,204,113,.25);display:flex;align-items:center;gap:4px;}
+.stat-pill-label{font-size:.6rem;color:#6fffb0;letter-spacing:1.5px;text-transform:uppercase;font-family:'Segoe UI',sans-serif;}
+.mode-status-pill{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);padding:2px 8px;border-radius:40px;font-size:.65rem;color:#7fffb8;font-weight:600;letter-spacing:.5px;margin-left:auto;white-space:nowrap;}
+.beat-dots-wrap{display:flex;flex-direction:column;gap:4px;}
+.beat-dots-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.beat-dots-label{font-size:.58rem;color:#6fffb0;letter-spacing:1.5px;text-transform:uppercase;min-width:10px;}
+.beat-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);transition:background .07s,box-shadow .07s;}
+.beat-dot.active{background:#2ecc71;box-shadow:0 0 8px #2ecc71;border-color:#2ecc71;}
+.beat-dot.accent-dot{background:#f39c12;box-shadow:0 0 8px #f39c12;border-color:#f39c12;}
+.beat-dot.poly-b{background:#a78bfa;box-shadow:0 0 8px #a78bfa;border-color:#a78bfa;}
+.beat-dot.fermata-dot{background:#f472b6;box-shadow:0 0 8px #f472b6;border-color:#f472b6;}
+
+/* BPM gauge */
+.central-gauge{background:rgba(0,0,0,.42);border-radius:20px;padding:12px 16px 14px;margin-bottom:12px;border:1px solid rgba(0,255,120,.18);flex-shrink:1;}
+.bpm-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;margin-bottom:6px;}
+.bpm-centre{display:flex;justify-content:center;align-items:center;}
+.bpm-unit-cell{display:flex;justify-content:center;align-items:center;}
+.bpm-number{font-size:3rem;font-weight:800;font-family:monospace;background:linear-gradient(135deg,#fff,#96f0bc);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:2px;line-height:1;}
+.bpm-unit{font-size:.75rem;color:#9effcf;letter-spacing:1px;margin-top:2px;}
+.bpm-buttons{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.bpm-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:8px 0;border-radius:8px;color:#ddd;font-weight:700;font-size:.82rem;cursor:pointer;transition:background .18s,color .18s;text-align:center;width:100%;}
+@media(hover:hover){.bpm-btn:hover{background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.3);}}
+.bpm-btn:active{background:rgba(255,255,255,0.22);}
+.bpm-mult{background:rgba(46,204,113,.08);border-color:rgba(46,204,113,.25);color:#6fffb0;}
+@media(hover:hover){.bpm-mult:hover{background:rgba(46,204,113,.18);}}
+.tap-btn{background:rgba(46,204,113,.12);border:1px solid rgba(46,204,113,.4);padding:8px 0;border-radius:8px;color:#6fffb0;font-weight:700;font-size:.76rem;cursor:pointer;letter-spacing:1px;transition:background .18s;text-align:center;width:100%;}
+@media(hover:hover){.tap-btn:hover{background:rgba(255,255,255,.12);}}
+.tap-btn:active{background:#2ecc71;color:#000;}
+.bpm-slider-row{display:flex;align-items:center;gap:8px;}
+.bpm-slider-label{font-size:.68rem;color:#6fffb0;letter-spacing:1px;min-width:24px;}
+input[type="range"].bpm-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;background:rgba(255,255,255,.15);outline:none;cursor:pointer;border:none;padding:0;}
+input[type="range"].bpm-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px #2ecc71;cursor:pointer;}
+
+/* Mode selector */
+.mode-selector-area{margin-bottom:12px;background:rgba(0,0,0,.3);border-radius:20px;padding:10px 14px;border:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+.mode-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.mode-row label{color:#b0ffd0;font-weight:600;font-size:.85rem;letter-spacing:.5px;}
+select{background:#131e17;border:1px solid rgba(46,204,113,.35);color:#ddf5e8;padding:6px 12px;border-radius:32px;font-size:.8rem;cursor:pointer;outline:none;transition:border-color .2s;max-width:100%;}
+select:focus{border-color:#2ecc71;}
+input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);color:white;padding:6px 8px;border-radius:32px;font-size:.8rem;cursor:pointer;outline:none;width:76px;}
+.dynamic-params{margin-top:12px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.14);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;}
+.param-group{display:flex;flex-direction:column;gap:4px;font-size:.72rem;color:#aeffcc;flex:0 0 auto;}
+.param-group input[type="number"]{width:76px;}
+
+/* ── MM:SS duration input pair ── */
+/* flex-basis:100% forces this group onto its own row instead of
+   squeezing/stretching alongside the BPM fields above it */
+.dur-input-group{display:flex;flex-direction:column;gap:4px;font-size:.72rem;color:#aeffcc;flex:1 1 100%;}
+.dur-mode-toggle{display:flex;gap:4px;}
+.dur-mode-btn{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.55);padding:4px 9px;border-radius:20px;
+  font-size:.66rem;letter-spacing:.3px;cursor:pointer;transition:background .18s,color .18s;
+}
+.dur-mode-btn.active{background:rgba(46,204,113,.18);border-color:rgba(46,204,113,.4);color:#6fffb0;}
+.mmss-row{display:flex;align-items:center;gap:4px;}
+.mmss-field{
+  background:#131e17;border:1px solid rgba(46,204,113,.35);color:white;
+  padding:6px 4px;border-radius:10px;font-size:.85rem;font-family:monospace;
+  outline:none;width:44px;text-align:center;
+}
+.mmss-field:focus{border-color:#2ecc71;}
+.mmss-colon{color:#6fffb0;font-weight:700;font-size:.9rem;}
+.mmss-unit-label{font-size:.62rem;color:rgba(255,255,255,.35);letter-spacing:.5px;}
+.measures-field{
+  background:#131e17;border:1px solid rgba(46,204,113,.35);color:white;
+  padding:6px 8px;border-radius:32px;font-size:.8rem;outline:none;width:76px;
+}
+.mode-info-line{margin-top:8px;padding-top:6px;border-top:1px dashed rgba(255,255,255,.1);font-size:.7rem;color:#6fffb0;line-height:1.6;}
+.ramp-bar-wrap{margin-top:8px;padding-top:6px;border-top:1px dashed rgba(255,255,255,.1);display:none;}
+.ramp-bar-wrap.visible{display:block;}
+.ramp-bar-label{font-size:.68rem;color:#9effcf;margin-bottom:4px;display:flex;justify-content:space-between;}
+.ramp-track{height:5px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden;}
+.ramp-fill{height:100%;border-radius:5px;width:0%;background:linear-gradient(90deg,#2ecc71,#a8ff78);transition:width .4s linear;}
+.ramp-fill.countdown{background:linear-gradient(90deg,#ff7675,#ff5e5e);}
+
+/* Settings rows */
+.lower-middle{background:rgba(0,0,0,.28);border-radius:20px;padding:4px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06);overflow:hidden;flex-shrink:1;}
+.settings-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px;transition:background .18s;border-radius:16px;}
+@media(hover:hover){.settings-row:hover{background:rgba(255,255,255,.03);}}
+.settings-row+.settings-row{border-top:1px solid rgba(255,255,255,.05);}
+.row-label{display:flex;align-items:center;gap:8px;min-width:120px;}
+.row-icon{font-size:1rem;width:24px;text-align:center;}
+.row-text{font-size:.78rem;font-weight:600;color:#b8ffd4;letter-spacing:.4px;}
+.row-control{display:flex;align-items:center;gap:10px;}
+.accent-track{width:80px;height:4px;background:rgba(255,255,255,.18);border-radius:4px;cursor:pointer;}
+.accent-fill{width:0%;height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);border-radius:4px;transition:width .18s;}
+.measure-value{background:rgba(0,0,0,.55);padding:3px 12px;border-radius:32px;font-family:monospace;font-size:.95rem;color:#9effcf;border:1px solid rgba(46,204,113,.2);min-width:34px;text-align:center;}
+.measure-ctrl{display:flex;gap:6px;align-items:center;}
+.measure-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);width:28px;height:28px;border-radius:50%;color:#ddd;font-weight:700;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;}
+@media(hover:hover){.measure-btn:hover{background:rgba(255,255,255,0.15);color:white;}}
+
+/* ── Custom accent beat-toggle row ──
+   Shown only when Accent Pattern = "Custom". One pill per beat in
+   the current measure; tap to toggle whether that beat is accented.
+   Rebuilt whenever Measure Count changes so it always stays in sync. */
+.custom-accent-row{
+  display:none;flex-wrap:wrap;gap:6px;width:100%;
+  margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.1);
+}
+.custom-accent-row.visible{display:flex;}
+.custom-accent-hint{
+  font-size:.62rem;color:rgba(255,255,255,.35);letter-spacing:.3px;
+  width:100%;margin-bottom:2px;
+}
+.custom-accent-btn{
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.55);font-size:.72rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s,border-color .15s,color .15s;
+  flex-shrink:0;
+}
+@media(hover:hover){.custom-accent-btn:hover{background:rgba(255,255,255,.12);}}
+.custom-accent-btn.accented{
+  background:rgba(243,156,18,.18);border-color:#f39c12;color:#f39c12;
+  box-shadow:0 0 8px rgba(243,156,18,.25);
+}
+
+/* Waveform beat visualiser */
+.waveform-wrap{
+  flex-shrink:0;
+  height:64px;
+  padding:0 18px;
+  display:flex;
+  align-items:center;
+  position:relative;
+  overflow:hidden;
+}
+.waveform-canvas{
+  width:100%;
+  height:100%;
+  display:block;
+  opacity:0.85;
+}
+
+/* Transport */
+.lower-control{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.38);border-radius:60px;padding:10px 18px;border:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+.transport-wrap{
+  flex-shrink:0;
+  padding:8px 0 max(20px, env(safe-area-inset-bottom));
+}
+.mode-indicator{display:flex;align-items:center;gap:6px;font-size:.72rem;color:#7fffb8;font-weight:600;letter-spacing:.5px;}
+.mode-indicator-dot{width:7px;height:7px;background:#2ecc71;border-radius:50%;box-shadow:0 0 6px #2ecc71;animation:ledBlink 1.5s ease-in-out infinite;}
+.mode-indicator-dot.stopped{animation:none;background:#555;box-shadow:none;}
+.mode-indicator-dot.paused{animation:none;background:#f39c12;box-shadow:0 0 6px #f39c12;}
+@keyframes ledBlink{0%,100%{opacity:1}50%{opacity:.3}}
+.transport-btns{display:flex;gap:8px;align-items:center;}
+.play-stop-btn{width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}
+@media(hover:hover){.play-stop-btn:hover{transform:scale(1.1);}}
+.play-stop-btn:active{transform:scale(.95);}
+#playPauseBtn{background:linear-gradient(135deg,#2ecc71,#27ae60);box-shadow:0 0 14px rgba(46,204,113,.5);}
+@media(hover:hover){#playPauseBtn:hover{box-shadow:0 0 22px rgba(46,204,113,.8);}}
+#stopBtn{background:linear-gradient(135deg,#ff5e5e,#c0392b);box-shadow:0 0 12px rgba(255,80,80,.4);}
+@media(hover:hover){#stopBtn:hover{box-shadow:0 0 20px rgba(255,80,80,.7);}}
+.volume-section{display:flex;align-items:center;gap:6px;}
+.vol-label{font-size:.65rem;color:#6fffb0;letter-spacing:1px;text-transform:uppercase;}
+.volume-track{width:80px;height:4px;background:rgba(255,255,255,.18);border-radius:4px;cursor:pointer;}
+.glass-fill{width:70%;height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);border-radius:4px;pointer-events:none;}
+
+/* Achievement toast */
+.ach-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(2,20,10,.96);border:1px solid rgba(46,204,113,.5);border-radius:14px;padding:10px 18px;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;z-index:999;white-space:nowrap;box-shadow:0 4px 24px rgba(46,204,113,.15);}
+.ach-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.ach-toast-icon{font-size:20px;}
+.ach-toast-text{display:flex;flex-direction:column;gap:2px;}
+.ach-toast-label{font-size:7.5px;letter-spacing:1.5px;color:#2ecc71;text-transform:uppercase;}
+.ach-toast-name{font-size:11px;color:white;font-weight:bold;}
+.storage-warn{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(255,80,80,.95);border-radius:12px;padding:8px 16px;font-size:11px;color:white;z-index:1000;display:none;}
+.storage-warn.show{display:block;}
+
+/* ═══════════════════════════════════════════════════════
+   DEVICE BREAKPOINTS
+   ═══════════════════════════════════════════════════════ */
+@media(max-width:350px){
+  .main-mode{padding:12px 12px 18px;}
+  .top-setting{padding-bottom:10px;margin-bottom:10px;}
+  .top-title{font-size:.95rem;}
+  .bpm-number{font-size:2.6rem;}
+  .bpm-btn{padding:4px 8px;font-size:.74rem;}
+  .settings-row{padding:8px 10px;}
+  .row-label{min-width:100px;}
+  .lower-control{padding:8px 12px;}
+}
+
+@media(max-height:780px){
+  .main-mode{padding:8px 14px 0px 14px;padding-bottom:max(24px, env(safe-area-inset-bottom));}
+  .top-setting{padding-bottom:8px;margin-bottom:8px;}
+  .beat-visualiser{padding:6px 10px;margin-bottom:6px;gap:8px;}
+  .pulse-wrap{width:40px;height:40px;}
+  .pulse-wrap svg{width:40px;height:40px;}
+  .stat-pill{padding:1px 7px;font-size:.68rem;}
+  .beat-dot{width:8px;height:8px;}
+  .mode-status-pill{font-size:.6rem;padding:1px 6px;}
+  .central-gauge{padding:6px 12px 8px;margin-bottom:6px;}
+  .bpm-number{font-size:2.4rem;}
+  .bpm-grid{gap:4px;}
+  .bpm-btn{padding:6px 0;font-size:.7rem;}
+  .tap-btn{padding:6px 0;font-size:.68rem;}
+  .bpm-slider-row{display:none;}
+  .mode-selector-area{padding:6px 10px;margin-bottom:6px;}
+  .mode-row label{font-size:.78rem;}
+  .mode-row select{font-size:.75rem;padding:4px 8px;}
+  .dynamic-params{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    margin-top:5px;
+    padding-top:5px;
+    gap:5px;
+  }
+  .param-group{font-size:.65rem;gap:2px;}
+  .param-group input,.param-group select{padding:3px 4px;font-size:.7rem;width:100%;}
+  .dur-input-group{grid-column:1/-1;font-size:.65rem;gap:3px;}
+  .dur-mode-btn{padding:3px 8px;font-size:.62rem;}
+  .mmss-field{padding:4px 3px;font-size:.78rem;width:38px;}
+  .mode-info-line{
+    grid-column:1/-1;
+    font-size:.6rem;
+    margin-top:3px;
+    padding-top:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .ramp-bar-wrap{margin-top:4px;padding-top:4px;}
+  .lower-middle{margin-bottom:6px;padding:2px;}
+  .settings-row{padding:5px 10px;}
+  .row-text{font-size:.7rem;}
+  .row-icon{font-size:.8rem;width:18px;}
+  .row-label{min-width:90px;gap:6px;}
+  select{padding:3px 6px;font-size:.7rem;}
+  .measure-btn{width:22px;height:22px;font-size:.8rem;}
+  .custom-accent-btn{width:24px;height:24px;font-size:.62rem;}
+  .custom-accent-hint{font-size:.56rem;}
+  .custom-accent-row{margin-top:5px;padding-top:5px;gap:5px;}
+  .measure-value{font-size:.8rem;padding:2px 8px;}
+  .lower-control{padding:7px 14px;}
+  .play-stop-btn{width:36px;height:36px;}
+  .vol-label{font-size:.6rem;}
+  .volume-track{width:60px;}
+}
+
+@media(min-width:768px) and (min-height:900px){
+  body{padding:40px 20px 24px;align-items:flex-start;justify-content:center;}
+  .main-mode{
+    width:min(600px,88vw);
+    height:auto;min-height:unset;
+    border-radius:36px;
+    border:1px solid rgba(0,255,120,.22);
+    box-shadow:0 30px 60px rgba(0,0,0,.5);
+    overflow:hidden;
+    padding:24px 28px 0;
+  }
+  .main-mode-scroll{overflow:visible;padding:0;flex:none;}
+  .transport-wrap{
+    margin:12px -28px 0;
+    padding:12px 28px 22px;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .bpm-number{font-size:4rem;}
+  .bpm-btn{padding:6px 16px;font-size:.9rem;}
+  .beat-visualiser{padding:14px 18px;margin-bottom:14px;}
+  .central-gauge{padding:14px 18px 16px;margin-bottom:14px;}
+  .settings-row{padding:12px 16px;}
+  .play-stop-btn{width:46px;height:46px;}
+}
+
+@media(min-width:768px) and (max-height:680px){
+  body{padding:8px 20px;align-items:flex-start;justify-content:center;}
+  .main-mode{
+    width:min(540px,88vw);
+    height:auto;min-height:unset;
+    border-radius:28px;
+    border:1px solid rgba(0,255,120,.22);
+    box-shadow:0 20px 40px rgba(0,0,0,.4);
+    overflow:hidden;
+    padding:12px 20px 0;
+  }
+  .main-mode-scroll{overflow:visible;padding:0;flex:none;}
+  .transport-wrap{
+    margin:8px -20px 0;
+    padding:10px 20px 16px;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+}
+
+/* ── Post-session summary — FULL SCREEN ──────────────────────────
+   Previously this was a bottom-sheet/modal overlay competing for
+   z-index space with the separate diary-nudge toast (which caused
+   the nudge to render hidden behind the summary). Now the summary
+   is a full-screen view — same idea as Athletic's screenSummary —
+   and the diary prompt is merged in as its own section at the
+   bottom of this same screen, so there is nothing left to overlap. */
+.session-summary{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(3,10,6,0.99);
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transform:translateY(14px);
+  transition:opacity 0.32s ease, transform 0.32s cubic-bezier(0.22,1,0.36,1);
+}
+.session-summary.show{
+  opacity:1;pointer-events:all;transform:translateY(0);
+}
+.summary-card{
+  flex:1;
+  width:100%;
+  max-width:560px;
+  margin:0 auto;
+  padding:20px 22px max(24px, env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:14px;
+  overflow-y:auto;
+}
+/* Desktop: frame it like the rest of the app's floating-card aesthetic
+   instead of true full-bleed — purely cosmetic, no positioning math
+   involved since this is a self-contained screen, not an overlay. */
+@media(min-width:500px){
+  .session-summary{
+    align-items:center;justify-content:center;padding:24px;
+    background:rgba(0,0,0,0.7);
+  }
+  .summary-card{
+    border-radius:32px;
+    border:1px solid rgba(46,204,113,0.25);
+    box-shadow:0 30px 70px rgba(0,0,0,0.6);
+    max-height:88vh;
+    flex:none;
+  }
+}
+.sum-header{display:flex;justify-content:space-between;align-items:center;}
+.sum-title{font-size:1rem;font-weight:700;color:#8affc2;letter-spacing:0.5px;}
+.sum-close{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.6);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;}
+.sum-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.sum-stat{background:rgba(0,0,0,0.35);border-radius:14px;padding:10px 8px;text-align:center;
+  border:1px solid rgba(46,204,113,0.12);}
+.sum-stat-val{font-size:1.3rem;font-weight:800;font-family:monospace;color:#2ecc71;line-height:1;}
+.sum-stat-label{font-size:0.6rem;letter-spacing:1.5px;color:rgba(255,255,255,0.4);
+  text-transform:uppercase;margin-top:4px;}
+.sum-actions{display:flex;gap:8px;}
+.sum-btn{flex:1;padding:12px 0;border-radius:14px;border:none;cursor:pointer;
+  font-size:0.75rem;letter-spacing:1px;font-family:'Segoe UI',sans-serif;
+  font-weight:600;text-transform:uppercase;transition:background 0.2s;}
+.sum-btn-primary{background:rgba(46,204,113,0.18);color:#2ecc71;
+  border:1px solid rgba(46,204,113,0.35);}
+@media(hover:hover){.sum-btn-primary:hover{background:rgba(46,204,113,0.3);}}
+.sum-btn-secondary{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55);
+  border:1px solid rgba(255,255,255,0.1);}
+@media(hover:hover){.sum-btn-secondary:hover{background:rgba(255,255,255,0.12);}}
+
+/* Mode change toast */
+.mode-toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-60px);
+  background:rgba(4,18,10,0.95);border:1px solid rgba(46,204,113,0.25);
+  border-radius:20px;padding:7px 16px;font-size:0.72rem;
+  color:rgba(255,255,255,0.75);z-index:500;
+  transition:transform 0.3s ease;white-space:nowrap;pointer-events:none;
+  letter-spacing:0.3px;
+}
+.mode-toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── Diary prompt — now a section inside the full-screen summary,
+   not a separate floating toast. This removes the entire class of
+   bug where the toast and the summary card competed for the same
+   screen space / z-index. ── */
+.sum-diary-section{
+  margin-top:6px;padding-top:16px;
+  border-top:1px solid rgba(255,255,255,0.08);
+  display:flex;flex-direction:column;gap:10px;
+}
+.sum-diary-prompt{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;
+}
+.sum-diary-text{font-size:0.82rem;color:rgba(255,255,255,0.85);}
+.sum-diary-actions{display:flex;gap:8px;flex-shrink:0;}
+.sum-diary-yes{
+  background:rgba(46,204,113,0.18);border:1px solid rgba(46,204,113,0.4);
+  border-radius:12px;padding:8px 14px;color:#2ecc71;font-size:0.74rem;
+  cursor:pointer;font-weight:600;transition:background 0.2s;white-space:nowrap;
+}
+@media(hover:hover){.sum-diary-yes:hover{background:rgba(46,204,113,0.3);}}
+.sum-diary-skip{
+  background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;
+  color:rgba(255,255,255,0.4);font-size:0.74rem;cursor:pointer;
+  padding:8px 12px;white-space:nowrap;
+}
+</style>
+</head>
+
+<body>
+<script src="storage.js"></script>
+<script src="metronome-engine.js"></script>
+<script src="onboarding.js"></script>
+
+<div class="ach-toast" id="achToast">
+  <div class="ach-toast-icon" id="achToastIcon">🏆</div>
+  <div class="ach-toast-text">
+    <div class="ach-toast-label">Achievement Unlocked!</div>
+    <div class="ach-toast-name" id="achToastName"></div>
+  </div>
+</div>
+<div class="storage-warn" id="storageWarn">⚠ Storage almost full — export a backup in Dashboard</div>
+
+<!-- Post-session summary -->
+<div class="session-summary" id="sessionSummary">
+  <div class="summary-card">
+    <div class="sum-header">
+      <span class="sum-title">Session Summary</span>
+      <div class="sum-close" id="sumClose">✕</div>
+    </div>
+    <div class="sum-stats">
+      <div class="sum-stat">
+        <div class="sum-stat-val" id="sumDuration">0:00</div>
+        <div class="sum-stat-label">Duration</div>
+      </div>
+      <div class="sum-stat">
+        <div class="sum-stat-val" id="sumBeats">0</div>
+        <div class="sum-stat-label">Beats</div>
+      </div>
+      <div class="sum-stat">
+        <div class="sum-stat-val" id="sumBPM">120</div>
+        <div class="sum-stat-label">BPM</div>
+      </div>
+    </div>
+    <div id="sumRampBreakdown" style="display:none;margin-top:10px;max-height:180px;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;"></div>
+
+    <!-- Diary prompt — merged into the summary screen itself.
+         Previously a separate floating toast that rendered hidden
+         behind this card; now it's just the final section here,
+         so there's nothing left for it to overlap with. -->
+    <div class="sum-diary-section" id="sumDiarySection">
+      <div class="sum-diary-prompt">
+        <span class="sum-diary-text">📖 Record this in your Diary?</span>
+        <div class="sum-diary-actions">
+          <div class="sum-diary-yes" id="nudgeYes">Yes →</div>
+          <div class="sum-diary-skip" id="nudgeNo">Skip</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sum-actions">
+      <button class="sum-btn sum-btn-primary" id="sumViewDash">View Progress</button>
+      <button class="sum-btn sum-btn-secondary" id="sumDismiss">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mode change toast -->
+<div class="mode-toast" id="modeToast">Mode will apply on next session</div>
+
+<div class="main-mode">
+
+<div class="main-mode-scroll">
+  <!-- Top bar -->
+  <div class="top-setting">
+    <a class="nav-icon-btn" href="metronomeItem.html" title="Back">←</a>
+    <div class="top-title">🎵 Music Metronome</div>
+    <a class="dash-icon-btn" href="dashboard.html?from=music" title="My Progress" id="dashIconBtn">📊</a>
+  </div>
+
+  <!-- Beat visualiser -->
+  <div class="beat-visualiser">
+    <div class="pulse-wrap">
+      <div class="pulse-ring" id="pulseRing"></div>
+      <svg width="58" height="58" viewBox="0 0 120 120" id="pulseSvg">
+        <defs>
+          <radialGradient id="gaugeGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#2ecc71"/>
+            <stop offset="100%" stop-color="#0a2a1a"/>
+          </radialGradient>
+        </defs>
+        <circle cx="60" cy="60" r="46" fill="url(#gaugeGrad)" stroke="#2ecc71" stroke-width="3" id="greenPulseCircle"/>
+      </svg>
+    </div>
+    <div class="beat-info">
+      <div class="beat-stats-row">
+        <div class="stat-pill"><span class="stat-pill-label">Beats</span><span id="beatCountDisplay">0</span></div>
+        <div class="stat-pill"><span class="stat-pill-label">Time</span><span id="elapsedTimeDisplay">0:00</span></div>
+        <div class="mode-status-pill" id="modeStatusPill">STOPPED</div>
+      </div>
+      <div class="beat-dots-wrap" id="beatDotsWrap">
+        <div class="beat-dots-row" id="beatDotsRowA"></div>
+        <div class="beat-dots-row" id="beatDotsRowB" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BPM Gauge -->
+  <div class="central-gauge">
+    <div class="bpm-grid">
+      <div class="bpm-btn" id="bpmMinus1">-1</div>
+      <div class="bpm-centre"><span class="bpm-number" id="bpmValue">120</span></div>
+      <div class="bpm-btn" id="bpmPlus1">+1</div>
+
+      <div class="bpm-btn" id="bpmMinus5">-5</div>
+      <div class="bpm-unit-cell"><span class="bpm-unit">BPM</span></div>
+      <div class="bpm-btn" id="bpmPlus5">+5</div>
+
+      <div class="bpm-btn bpm-mult" id="bpmHalf">½×</div>
+      <div class="tap-btn" id="tapBtn">TAP</div>
+      <div class="bpm-btn bpm-mult" id="bpmDouble">2×</div>
+    </div>
+    <div class="bpm-slider-row">
+      <span class="bpm-slider-label">40</span>
+      <input type="range" class="bpm-slider" id="bpmSlider" min="40" max="420" value="120">
+      <span class="bpm-slider-label" style="text-align:right">420</span>
+    </div>
+  </div>
+
+  <!-- Mode selector -->
+  <div class="mode-selector-area">
+    <div class="mode-row">
+      <label>🎛️ MODE</label>
+      <select id="modeSelect">
+        <option value="regular">Regular Metronome</option>
+        <option value="practiceRamp">Practice Ramp</option>
+        <option value="countdownRamp">Countdown Ramp</option>
+        <option value="polyRhythm">Poly Rhythm</option>
+        <option value="loopFermata">Loop with Fermata</option>
+      </select>
+    </div>
+    <div id="dynamicParamPanel" class="dynamic-params"></div>
+    <div class="ramp-bar-wrap" id="rampBarWrap">
+      <div class="ramp-bar-label"><span id="rampBarLabel">Ramp</span><span id="rampBarInfo"></span></div>
+      <div class="ramp-track"><div class="ramp-fill" id="rampFill"></div></div>
+    </div>
+  </div>
+
+  <!-- Settings rows -->
+  <div class="lower-middle">
+    <div class="settings-row">
+      <div class="row-label"><span class="row-icon">🎯</span><span class="row-text">Subdivisions</span></div>
+      <div class="row-control">
+        <select id="subdivisionSelect">
+          <option value="1">Quarter notes (1/4)</option>
+          <option value="2">Eighth notes (1/8)</option>
+          <option value="3">Triplets (3:1)</option>
+          <option value="4">Sixteenth notes (1/16)</option>
+          <option value="5">Quintuplets (5:1)</option>
+          <option value="6">Sextuplets (6:1)</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="row-label"><span class="row-icon">⚡</span><span class="row-text">Accent Pattern</span></div>
+      <div class="row-control">
+        <select id="accentPatternSelect">
+          <option value="off">Off</option>
+          <option value="every2">Every 2nd beat</option>
+          <option value="every3">Every 3rd beat</option>
+          <option value="every4">Every 4th beat</option>
+          <option value="custom">Custom (measure)</option>
+        </select>
+        <div class="accent-track"><div class="accent-fill" id="accentFill"></div></div>
+      </div>
+      <!-- Custom accent beat toggles — one pill per beat in the
+           current measure. Hidden unless "Custom" is selected.
+           Rebuilt automatically whenever Measure Count changes. -->
+      <div class="custom-accent-row" id="customAccentRow">
+        <span class="custom-accent-hint">Tap beats to accent:</span>
+        <div id="customAccentBtns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="row-label"><span class="row-icon">📏</span><span class="row-text">Measure Count</span></div>
+      <div class="row-control">
+        <div class="measure-ctrl">
+          <button id="measureMinus" class="measure-btn">−</button>
+          <span class="measure-value" id="measureValue">4</span>
+          <button id="measurePlus" class="measure-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="row-label"><span class="row-icon">🥁</span><span class="row-text">Instrument</span></div>
+      <div class="row-control">
+        <select id="instrumentSelect">
+          <option value="woodblock">Woodblock</option>
+          <option value="cowbell">Cowbell</option>
+          <option value="clave">Clave</option>
+          <option value="hihat">Hi-hat</option>
+          <option value="tambourine">Tambourine</option>
+          <option value="shaker">Shaker</option>
+          <option value="bongo">Bongo</option>
+          <option value="snap">Snap</option>
+          <option value="rimshot">Rimshot</option>
+          <option value="clap">Clap</option>
+          <option value="bell">Bell</option>
+          <option value="cymbal">Cymbal</option>
+          <option value="servicebell">Service Bell</option>
+          <option value="vibraslap">Vibraslap</option>
+          <option value="wood">Wood</option>
+          <option value="drumkit">Drum Kit</option>
+          <option value="techno">Techno Beep</option>
+          <option value="clock">Clock</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-mode-scroll -->
+
+  <!-- Waveform beat visualiser -->
+  <div class="waveform-wrap" id="waveformWrap">
+    <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+  </div>
+
+  <!-- Transport -->
+  <div class="transport-wrap">
+    <div class="lower-control">
+      <div class="mode-indicator">
+        <div class="mode-indicator-dot stopped" id="ledDot"></div>
+        <span id="modeLabel">REGULAR</span>
+      </div>
+      <div class="transport-btns">
+        <button class="play-stop-btn" id="playPauseBtn" title="Play / Pause">
+          <svg id="playIcon" width="18" height="18" viewBox="0 0 24 24" fill="white">
+            <polygon points="5,3 19,12 5,21"/>
+          </svg>
+        </button>
+        <button class="play-stop-btn" id="stopBtn" title="Stop">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+          </svg>
+        </button>
+      </div>
+      <div class="volume-section">
+        <span class="vol-label">Vol</span>
+        <div class="volume-track" id="volumeTrack">
+          <div class="glass-fill" id="volumeFill" style="width:70%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-mode -->
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let isRunning   = false;
+let wasStopped  = true;
+let currentBPM  = 120;
+let accentPattern = "off";
+// Which beat indices (0-based, within the current measure) are accented
+// when accentPattern === "custom". Defaults to just the downbeat so a
+// freshly-selected Custom pattern isn't completely silent before the
+// user taps anything.
+let customAccentBeats = [0];
+let measureCount  = 4;
+let currentInstrument = "woodblock";
+let volume = 0.7;
+
+// ── Beat counting ──────────────────────────────
+// beatCounter: total beats accumulated across ALL ramp steps
+// _rampStepStartSec: elapsed seconds at the START of the current ramp step
+// _rampStepStartBeats: beatCounter value at the START of the current ramp step
+//
+// The clock formula is:
+//   beatsIntoStep = Math.round((trueSec - _rampStepStartSec) * currentBPM / 60)
+//   beatCounter   = _rampStepStartBeats + beatsIntoStep
+//
+// This means each step only counts beats earned AT THE STEP'S OWN BPM,
+// and those are stacked on top of the real beats from previous steps.
+// No phantom beats are added when BPM changes.
+let beatCounter        = 0;
+let _rampStepStartSec  = 0;   // elapsedSec when current ramp step began
+let _rampStepStartBeats= 0;   // beatCounter when current ramp step began
+
+let elapsedSec     = 0;
+let sessionStartTs = null;
+let clockInterval  = null;
+let rampTimerID    = null;
+
+// Storage tracking
+let _sessionStartBPM = 120;
+let _sessionMode     = "regular";
+
+// Ramp state
+let ramp = {
+  active:false, startBPM:100, endBPM:160,
+  stepBPM:5, stepDuration:5, stepUnit:"sec",
+  currentStepBPM:100, measuresInStep:0, phases:[]
+};
+let countdown = {
+  active:false, startBPM:160, endBPM:100,
+  stepBPM:5, stepDuration:5, stepUnit:"sec",
+  currentStepBPM:160, measuresInStep:0, finished:false
+};
+let fermata = {
+  active:false, beatsPerLoop:4,
+  pauseDurationSec:2, loopBeatCount:0, inPause:false
+};
+
+// ── Native Capacitor plugin ───────────────────
+let NativeMetronome = null;
+let _nativeListenerHandle = null;
+let _usingNative = false;
+
+function initNativePlugin(){
+  try {
+    if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BeatStrideMetronome){
+      NativeMetronome = window.Capacitor.Plugins.BeatStrideMetronome;
+    }
+  } catch(e){ console.warn("[BeatStride] Plugin init error:", e); }
+}
+document.addEventListener("deviceready", initNativePlugin);
+setTimeout(initNativePlugin, 100);
+
+// ═══════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════
+const bpmSpan        = document.getElementById("bpmValue");
+const bpmSlider      = document.getElementById("bpmSlider");
+const modeSelect     = document.getElementById("modeSelect");
+const dynamicPanel   = document.getElementById("dynamicParamPanel");
+const accentFill     = document.getElementById("accentFill");
+const measureSpan    = document.getElementById("measureValue");
+const instrumentSel  = document.getElementById("instrumentSelect");
+const playPauseBtn   = document.getElementById("playPauseBtn");
+const stopBtnEl      = document.getElementById("stopBtn");
+const beatCountSpan  = document.getElementById("beatCountDisplay");
+const elapsedSpan    = document.getElementById("elapsedTimeDisplay");
+const greenCircle    = document.getElementById("greenPulseCircle");
+const pulseRing      = document.getElementById("pulseRing");
+const modeLabelSpan  = document.getElementById("modeLabel");
+const ledDot         = document.getElementById("ledDot");
+const playIcon       = document.getElementById("playIcon");
+const beatDotsRowA   = document.getElementById("beatDotsRowA");
+const beatDotsRowB   = document.getElementById("beatDotsRowB");
+const modeStatusPill = document.getElementById("modeStatusPill");
+const rampBarWrap    = document.getElementById("rampBarWrap");
+const rampFill       = document.getElementById("rampFill");
+const rampBarLabel   = document.getElementById("rampBarLabel");
+const rampBarInfo    = document.getElementById("rampBarInfo");
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+function fmtTime(s){const m=Math.floor(s/60);return m+":"+String(Math.floor(s%60)).padStart(2,"0");}
+
+function setBPM(val, updateSlider=true){
+  currentBPM = Math.min(420,Math.max(40,Math.round(val)));
+  bpmSpan.innerText = currentBPM;
+  if(updateSlider) bpmSlider.value = currentBPM;
+  MetEngine.setBPM(currentBPM);
+}
+
+// ═══════════════════════════════════════════════
+//  VISUALS
+// ═══════════════════════════════════════════════
+function flashPulse(){
+  greenCircle.style.opacity="1";
+  greenCircle.style.transform="scale(1.08)";
+  setTimeout(()=>{
+    greenCircle.style.opacity="";
+    greenCircle.style.transform="";
+  },85);
+  pulseRing.classList.remove("flash"); void pulseRing.offsetWidth; pulseRing.classList.add("flash");
+}
+
+function lightDot(row,idx,cls){
+  row.querySelectorAll(".beat-dot").forEach(d=>d.classList.remove("active","accent-dot","poly-b","fermata-dot"));
+  const d=row.querySelectorAll(".beat-dot")[idx];
+  if(d) d.classList.add(cls);
+}
+
+function buildDotsRow(row,count,accentFn){
+  row.innerHTML="";
+  for(let i=0;i<count;i++){
+    const d=document.createElement("div"); d.className="beat-dot";
+    d.dataset.accent=accentFn(i)?"1":"0"; row.appendChild(d);
+  }
+}
+
+function rebuildBeatDots(){
+  const mode=modeSelect.value;
+  const aFn=i=>(accentPattern==="off"&&i===0)||(accentPattern==="every2"&&i%2===0)||(accentPattern==="every3"&&i%3===0)||(accentPattern==="every4"&&i%4===0)||(accentPattern==="custom"&&customAccentBeats.includes(i));
+  if(mode==="polyRhythm"){
+    const top=parseInt(document.getElementById("polyTop")?.value||3);
+    const bot=parseInt(document.getElementById("polyBottom")?.value||2);
+    buildDotsRow(beatDotsRowA,bot,i=>i===0);
+    buildDotsRow(beatDotsRowB,top,i=>i===0);
+    beatDotsRowA.insertAdjacentHTML("afterbegin",`<span class="beat-dots-label" style="color:#2ecc71">${bot}</span>`);
+    beatDotsRowB.insertAdjacentHTML("afterbegin",`<span class="beat-dots-label" style="color:#a78bfa">${top}</span>`);
+    beatDotsRowB.style.display="flex";
+  } else if(mode==="loopFermata"){
+    buildDotsRow(beatDotsRowA,fermata.beatsPerLoop,i=>i===0);
+    beatDotsRowB.style.display="none";
+  } else {
+    buildDotsRow(beatDotsRowA,measureCount,aFn);
+    beatDotsRowB.style.display="none";
+  }
+}
+
+/**
+ * Rebuild the tappable "which beats are accented" toggle row used by
+ * the "Custom (measure)" accent pattern. Shows/hides the whole row
+ * based on whether Custom is currently selected, and regenerates one
+ * button per beat in the current measure — so it always stays in
+ * sync with Measure Count.
+ *
+ * Out-of-range indices are pruned from customAccentBeats whenever the
+ * measure shrinks (e.g. going from 8 beats down to 4 clears any
+ * accents that were set on beats 5–8), so stale state never lingers.
+ */
+function rebuildCustomAccentUI(){
+  const row  = document.getElementById("customAccentRow");
+  const btns = document.getElementById("customAccentBtns");
+  if(!row || !btns) return;
+
+  const isCustom = accentPattern === "custom";
+  row.classList.toggle("visible", isCustom);
+  if(!isCustom) return; // no need to rebuild buttons if hidden
+
+  // Prune any selected beats that no longer exist in the measure
+  customAccentBeats = customAccentBeats.filter(i => i < measureCount);
+  if(customAccentBeats.length === 0) customAccentBeats = [0]; // never fully empty
+
+  btns.innerHTML = "";
+  for(let i=0; i<measureCount; i++){
+    const b = document.createElement("div");
+    b.className = "custom-accent-btn" + (customAccentBeats.includes(i) ? " accented" : "");
+    b.textContent = i+1; // 1-based label for the user, 0-based internally
+    b.title = `Beat ${i+1}`;
+    b.onclick = ()=>{
+      const idx = customAccentBeats.indexOf(i);
+      if(idx === -1) customAccentBeats.push(i);
+      else customAccentBeats.splice(idx,1);
+      // Never allow zero accented beats — that would be silent and
+      // indistinguishable from a stuck/broken control.
+      if(customAccentBeats.length === 0) customAccentBeats.push(i);
+
+      b.classList.toggle("accented", customAccentBeats.includes(i));
+      MetEngine.setAccentPattern("custom", customAccentBeats);
+      rebuildBeatDots();
+    };
+    btns.appendChild(b);
+  }
+}
+
+function updateRampBar(){
+  const mode=modeSelect.value;
+  if(mode==="practiceRamp"&&ramp.active){
+    const pct=Math.min(100,((ramp.currentStepBPM-ramp.startBPM)/(ramp.endBPM-ramp.startBPM))*100);
+    rampFill.style.width=pct+"%"; rampFill.classList.remove("countdown");
+    rampBarLabel.innerText="Practice Ramp"; rampBarInfo.innerText=ramp.currentStepBPM+" → "+ramp.endBPM+" BPM";
+    rampBarWrap.classList.add("visible");
+  } else if(mode==="countdownRamp"&&countdown.active){
+    const pct=Math.min(100,((countdown.startBPM-countdown.currentStepBPM)/(countdown.startBPM-countdown.endBPM))*100);
+    rampFill.style.width=pct+"%"; rampFill.classList.add("countdown");
+    rampBarLabel.innerText="Countdown Ramp"; rampBarInfo.innerText=countdown.currentStepBPM+" → "+countdown.endBPM+" BPM";
+    rampBarWrap.classList.add("visible");
+  } else {
+    rampBarWrap.classList.remove("visible");
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  CLOCK
+//
+//  FIX: The old formula was:
+//    expected = Math.round(trueSec * currentBPM / 60)
+//  This calculated total beats from t=0 at the NEW BPM after every ramp
+//  step, instantly backdating all prior time at the new rate and producing
+//  phantom beats equal to (newBPM - startBPM) on each transition.
+//
+//  The fix uses per-step anchors:
+//    beatsIntoStep = Math.round((trueSec - _rampStepStartSec) * currentBPM / 60)
+//    expected      = _rampStepStartBeats + beatsIntoStep
+//
+//  Each step only counts beats at its own BPM from its own start time.
+//  These are stacked on the preserved real total from all previous steps.
+//  _rampStepStartSec and _rampStepStartBeats are reset in startRampTimer()
+//  at every BPM transition, and initialised to 0 on a fresh session start.
+// ═══════════════════════════════════════════════
+function startClock(){
+  if(clockInterval) return;
+  sessionStartTs = performance.now();
+  clockInterval = setInterval(()=>{
+    const elapsed = (performance.now() - sessionStartTs) / 1000;
+    const trueSec = elapsedSec + elapsed;
+    elapsedSpan.innerText = fmtTime(trueSec);
+
+    const mode = modeSelect.value;
+    if(isRunning && !_fermataInPause && mode !== "loopFermata" && mode !== "polyRhythm"){
+      // Count only beats earned within the CURRENT ramp step at its BPM,
+      // then add to the beats already earned in previous steps.
+      const secIntoStep    = trueSec - _rampStepStartSec;
+      const beatsIntoStep  = Math.round(secIntoStep * currentBPM / 60);
+      const expected       = _rampStepStartBeats + beatsIntoStep;
+
+      if(expected !== beatCounter){
+        beatCounter = expected;
+        beatCountSpan.innerText = beatCounter;
+      }
+    }
+  }, 10);
+}
+
+function pauseClock(){
+  if(!clockInterval) return;
+  elapsedSec += (performance.now() - sessionStartTs) / 1000;
+  clearInterval(clockInterval); clockInterval = null;
+  elapsedSpan.innerText = fmtTime(elapsedSec);
+}
+
+// ═══════════════════════════════════════════════
+//  METENGINE CALLBACKS
+// ═══════════════════════════════════════════════
+let _engineReady    = false;
+let _pendingPause   = false;
+let _fermataInPause = false;
+
+function registerCallbacks(){
+  MetEngine.clearCallbacks();
+
+  MetEngine.onBeat(info=>{
+    _engineReady = true;
+    if(_pendingPause){ _pendingPause=false; pauseMetronome(); return; }
+    if(_fermataInPause) return;
+
+    flashPulse();
+
+    // Fermata
+    if(fermata.active){
+      fermata.loopBeatCount++;
+      if(fermata.loopBeatCount >= fermata.beatsPerLoop){
+        fermata.inPause = true; fermata.loopBeatCount = 0;
+        modeStatusPill.innerText = "FERMATA PAUSE…";
+        _fermataInPause = true;
+        MetEngine.setVolume(0);
+        setTimeout(()=>{
+          if(!isRunning) return;
+          fermata.inPause  = false;
+          _fermataInPause  = false;
+          modeStatusPill.innerText = "LOOP FERMATA";
+          MetEngine.setVolume(volume);
+          ledDot.classList.remove("paused","stopped");
+          setPlayIcon();
+        }, fermata.pauseDurationSec * 1000);
+      }
+    }
+
+    // Measure-based ramp steps (triggered on downbeat)
+    if(info.isDownbeat){
+      const mode = modeSelect.value;
+      if(mode==="practiceRamp" && ramp.active && ramp.stepUnit==="measures"){
+        if(++ramp.measuresInStep >= ramp.stepDuration){
+          ramp.measuresInStep = 0;
+
+          if(ramp.currentStepBPM >= ramp.endBPM){
+            // Already AT final BPM and its own measure count just
+            // completed — stop now. Mirrors the countdown-ramp fix:
+            // the end BPM must play its FULL duration before stopping,
+            // not be cut off the instant it's reached.
+            ramp.active = false; clearInterval(rampTimerID);
+            modeStatusPill.innerText = "RAMP COMPLETE ✓";
+            setTimeout(()=>{ if(isRunning) stopMetronome(); }, 50);
+          } else {
+            // Anchor BEFORE changing BPM (fix: preserve current beats)
+            _anchorRampStep();
+            ramp.currentStepBPM = Math.min(ramp.endBPM, ramp.currentStepBPM + ramp.stepBPM);
+            setBPM(ramp.currentStepBPM, true); updateRampBar();
+            // Don't stop yet even if we just reached endBPM — let it
+            // play its own full measure count first (handled by the
+            // branch above on the NEXT time this fires).
+          }
+        }
+      }
+      if(mode==="countdownRamp" && countdown.active && !countdown.finished && countdown.stepUnit==="measures"){
+        if(++countdown.measuresInStep >= countdown.stepDuration){
+          countdown.measuresInStep = 0;
+
+          if(countdown.currentStepBPM <= countdown.endBPM){
+            // Already AT final BPM and its measure-count just completed —
+            // stop now. (On the transition step below, currentStepBPM
+            // becomes endBPM but still needs its OWN full measure count
+            // to play out before we get here again.)
+            countdown.finished = true; clearInterval(rampTimerID);
+            modeStatusPill.innerText = "COUNTDOWN COMPLETE ✓";
+            setTimeout(()=>{ if(isRunning) stopMetronome(); }, 50);
+          } else {
+            // Anchor BEFORE changing BPM
+            _anchorRampStep();
+            countdown.currentStepBPM = Math.max(countdown.endBPM, countdown.currentStepBPM - countdown.stepBPM);
+            setBPM(countdown.currentStepBPM, true); updateRampBar();
+            if(countdown.currentStepBPM <= countdown.endBPM){
+              modeStatusPill.innerText = "HOLDING "+countdown.endBPM+" BPM";
+              // Don't set finished yet — let the final BPM play its
+              // own full measure count first (handled by the branch
+              // above on the NEXT time this fires).
+            }
+          }
+        }
+      }
+    }
+
+    // Dot indicator (non-poly modes)
+    if(modeSelect.value !== "polyRhythm"){
+      const pos     = info.measurePosition >> 0;
+      const beatPos = Math.floor(pos / (info.subdiv||1)) % measureCount;
+      lightDot(beatDotsRowA, beatPos, info.isAccent ? "accent-dot" : "active");
+    }
+  });
+
+  MetEngine.onAccent(()=>{
+    const beatPos = beatCounter % measureCount;
+    const pct     = ((beatPos+1) / measureCount) * 100;
+    accentFill.style.width = pct+"%";
+    setTimeout(()=> accentFill.style.width = "0%", 200);
+  });
+
+  MetEngine.onPolyBeat(info=>{
+    if(info.layer === "A"){
+      beatCounter++;
+      beatCountSpan.innerText = beatCounter;
+      flashPulse();
+      const dots = beatDotsRowA.querySelectorAll(".beat-dot");
+      dots.forEach(d=>d.classList.remove("active","accent-dot","poly-b"));
+      if(dots[info.idx]) dots[info.idx].classList.add("active");
+    } else {
+      const dots = beatDotsRowB.querySelectorAll(".beat-dot");
+      dots.forEach(d=>d.classList.remove("active","accent-dot","poly-b"));
+      if(dots[info.idx]) dots[info.idx].classList.add("poly-b");
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  RAMP STEP ANCHOR
+//  Call this BEFORE changing BPM at each ramp transition.
+//  Snapshots elapsed time and beat count so the clock formula
+//  uses them as the new zero-point for the incoming step.
+// ═══════════════════════════════════════════════
+function _anchorRampStep(){
+  // Freeze the accumulated time up to right now
+  if(clockInterval){
+    elapsedSec += (performance.now() - sessionStartTs) / 1000;
+    sessionStartTs = performance.now();
+  }
+  _rampStepStartSec   = elapsedSec;
+  _rampStepStartBeats = beatCounter;
+}
+
+// ═══════════════════════════════════════════════
+//  RAMP TIMER (time-based steps)
+// ═══════════════════════════════════════════════
+function startRampTimer(){
+  clearInterval(rampTimerID);
+  const mode = modeSelect.value;
+
+  if(mode === "practiceRamp" && ramp.stepUnit === "sec" && ramp.active){
+    const durMs = ramp.stepDuration * 1000;
+
+    function runStep(){
+      if(!isRunning || !ramp.active) return;
+      rampTimerID = setTimeout(()=>{
+        if(!isRunning || !ramp.active) return;
+
+        // Record phase BEFORE transition using current beatCounter
+        const phaseBeats = beatCounter - (ramp.phases.reduce((a,p)=>a+p.beats,0));
+        ramp.phases.push({
+          bpm: ramp.currentStepBPM,
+          durationSec: ramp.stepDuration,
+          beats: Math.max(0, phaseBeats)
+        });
+
+        // Check if this was the last step
+        if(ramp.currentStepBPM >= ramp.endBPM){
+          ramp.active = false;
+          modeStatusPill.innerText = "RAMP COMPLETE ✓";
+          setTimeout(()=>{ if(isRunning) stopMetronome(); }, 200);
+          return;
+        }
+
+        // ── FIX: anchor step before BPM change ──────────────────
+        // pauseClock snapshots elapsedSec so _anchorRampStep sees
+        // the correct time up to this exact moment.
+        pauseClock();
+        _anchorRampStep();
+        // ────────────────────────────────────────────────────────
+
+        ramp.currentStepBPM = Math.min(ramp.endBPM, ramp.currentStepBPM + ramp.stepBPM);
+
+        // Restart engine at new BPM
+        MetEngine.stop();
+        setTimeout(()=>{
+          if(!isRunning || !ramp.active) return;
+          setBPM(ramp.currentStepBPM, true);
+          MetEngine.setBPM(ramp.currentStepBPM);
+          registerCallbacks();
+          MetEngine.start();
+          startClock();   // restart clock from anchored position
+          updateRampBar();
+          runStep();
+        }, 20);
+      }, durMs);
+    }
+
+    runStep();
+
+  } else if(mode === "countdownRamp" && countdown.stepUnit === "sec" && countdown.active && !countdown.finished){
+    const cdDurMs = countdown.stepDuration * 1000;
+
+    function runCdStep(){
+      rampTimerID = setTimeout(()=>{
+        if(!isRunning || countdown.finished) return;
+
+        // ── FIX: anchor step before BPM change ──────────────────
+        pauseClock();
+        _anchorRampStep();
+        // ────────────────────────────────────────────────────────
+
+        countdown.currentStepBPM = Math.max(countdown.endBPM, countdown.currentStepBPM - countdown.stepBPM);
+
+        // Restart engine at new BPM
+        MetEngine.stop();
+        setTimeout(()=>{
+          if(!isRunning) return;
+          setBPM(countdown.currentStepBPM, true);
+          MetEngine.setBPM(countdown.currentStepBPM);
+          registerCallbacks();
+          MetEngine.start();
+          startClock();   // restart clock from anchored position
+          updateRampBar();
+
+          if(countdown.currentStepBPM <= countdown.endBPM){
+            // Final BPM reached — let it play for its FULL step duration
+            // first (matching Practice Ramp behavior), then auto-stop.
+            // Previously this branch set finished=true immediately and
+            // never scheduled a stop, so the metronome ran forever at
+            // the end BPM until the user manually pressed Stop.
+            countdown.finished = true;
+            modeStatusPill.innerText = "COUNTDOWN COMPLETE ✓";
+            rampTimerID = setTimeout(()=>{
+              if(isRunning) stopMetronome();
+            }, cdDurMs);
+          } else {
+            runCdStep();
+          }
+        }, 20);
+      }, cdDurMs);
+    }
+
+    runCdStep();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  NATIVE FERMATA
+// ═══════════════════════════════════════════════
+function startNativeFermata(beatsPerLoop, pauseSec){
+  if(!NativeMetronome) return;
+  let loopCount = 0;
+  let inPause   = false;
+  if(_nativeListenerHandle){ _nativeListenerHandle.remove(); _nativeListenerHandle=null; }
+  NativeMetronome.start({ bpm:currentBPM, beatsPerMeasure:beatsPerLoop, subdivision:1, volume:volume });
+  _nativeListenerHandle = NativeMetronome.addListener("beat", (info)=>{
+    if(!isRunning || inPause) return;
+    MetEngine.testClick(info.isAccent);
+    beatCounter++;
+    beatCountSpan.innerText = beatCounter;
+    flashPulse();
+    const dots = beatDotsRowA.querySelectorAll(".beat-dot");
+    dots.forEach(d=>d.classList.remove("active","accent-dot"));
+    const pos = loopCount % beatsPerLoop;
+    if(dots[pos]) dots[pos].classList.add(info.isAccent ? "accent-dot" : "active");
+    loopCount++;
+    if(loopCount >= beatsPerLoop){
+      loopCount = 0; inPause = true; fermata.inPause = true;
+      modeStatusPill.innerText = "FERMATA PAUSE…";
+      NativeMetronome.setMuted({ muted: true });
+      setTimeout(()=>{
+        if(!isRunning) return;
+        inPause = false; fermata.inPause = false;
+        modeStatusPill.innerText = "LOOP FERMATA";
+        NativeMetronome.setMuted({ muted: false });
+      }, pauseSec * 1000);
+    }
+  });
+}
+
+function stopNative(){
+  if(!_usingNative) return;
+  _usingNative = false;
+  if(_nativeListenerHandle){ _nativeListenerHandle.remove(); _nativeListenerHandle=null; }
+  NativeMetronome?.stop({});
+  pauseClock();
+  isRunning = false;
+}
+
+// ═══════════════════════════════════════════════
+//  COUNTERS / ICONS
+// ═══════════════════════════════════════════════
+function resetCounters(){
+  beatCounter         = 0;
+  elapsedSec          = 0;
+  _rampStepStartSec   = 0;   // FIX: reset step anchors on fresh session
+  _rampStepStartBeats = 0;
+  _fermataInPause     = false;
+  _usingNative        = false;
+  beatCountSpan.innerText = "0";
+  elapsedSpan.innerText   = "0:00";
+}
+
+function setPlayIcon(){
+  playIcon.innerHTML='<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+}
+function setPauseIcon(){
+  playIcon.innerHTML='<polygon points="5,3 19,12 5,21"/>';
+}
+
+// ═══════════════════════════════════════════════
+//  TRANSPORT
+// ═══════════════════════════════════════════════
+function startMetronome(){
+  if(isRunning) return;
+  const mode    = modeSelect.value;
+  const isFresh = wasStopped || !MetEngine.isPaused();
+
+  MetEngine.setInstrument(currentInstrument);
+  MetEngine.setVolume(volume);
+  MetEngine.setBPM(currentBPM);
+  MetEngine.setMeasureBeats(measureCount);
+  MetEngine.setSubdivisions(parseInt(document.getElementById("subdivisionSelect")?.value)||1);
+  MetEngine.setAccentPattern(accentPattern, customAccentBeats);
+
+  if(isFresh){
+    resetCounters();  // also resets _rampStepStartSec/Beats to 0
+  }
+
+  registerCallbacks();
+
+  if(isFresh){
+    _sessionStartBPM = currentBPM;
+    _sessionMode     = mode;
+
+    if(mode === "practiceRamp"){
+      const s      = parseInt(document.getElementById("rampStart")?.value||100);
+      const e      = parseInt(document.getElementById("rampEnd")?.value||160);
+      const step   = parseInt(document.getElementById("rampStep")?.value||5);
+      const { dur, stepUnit } = readStepDuration("ramp");
+      ramp = {active:true,startBPM:s,endBPM:e,stepBPM:step,stepDuration:dur,stepUnit:stepUnit,
+               currentStepBPM:s,measuresInStep:0,phases:[]};
+      setBPM(s); updateRampBar(); modeStatusPill.innerText="RAMPING UP";
+
+    } else if(mode === "countdownRamp"){
+      const s      = parseInt(document.getElementById("cdStart")?.value||160);
+      const e      = parseInt(document.getElementById("cdEnd")?.value||100);
+      const step   = parseInt(document.getElementById("cdStep")?.value||5);
+      const { dur, stepUnit } = readStepDuration("cd");
+      countdown = {active:true,startBPM:s,endBPM:e,stepBPM:step,stepDuration:dur,stepUnit:stepUnit,
+                   currentStepBPM:s,measuresInStep:0,finished:false};
+      setBPM(s); updateRampBar(); modeStatusPill.innerText="COUNTING DOWN";
+
+    } else if(mode === "loopFermata"){
+      const bpl = parseInt(document.getElementById("fermataBeats")?.value||4);
+      const pds = parseFloat(document.getElementById("fermataPause")?.value||2);
+      fermata = {active:true,beatsPerLoop:bpl,pauseDurationSec:pds,loopBeatCount:0,inPause:false};
+      rebuildBeatDots(); modeStatusPill.innerText="LOOP FERMATA";
+      if(NativeMetronome && !_usingNative){
+        _usingNative = true;
+        MetEngine.stop();
+        try {
+          const ctx  = new (window.AudioContext||window.webkitAudioContext)();
+          const osc  = ctx.createOscillator();
+          const gain = ctx.createGain();
+          gain.gain.value = 0;
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(); osc.stop(ctx.currentTime+0.001);
+        } catch(e){}
+        isRunning   = true;
+        wasStopped  = false;
+        ledDot.classList.remove("stopped","paused");
+        setPlayIcon(); startClock();
+        startNativeFermata(bpl, pds);
+        return;
+      }
+
+    } else if(mode === "polyRhythm"){
+      modeStatusPill.innerText="POLY RHYTHM";
+    } else {
+      modeStatusPill.innerText="PLAYING";
+    }
+
+    rebuildBeatDots();
+    wasStopped = false;
+  } else {
+    modeStatusPill.innerText="PLAYING";
+  }
+
+  isRunning     = true;
+  _engineReady  = false;
+  _pendingPause = false;
+  _musicSessionSaved = false;
+  ledDot.classList.remove("stopped","paused");
+  setPlayIcon(); startClock();
+
+  if(mode === "practiceRamp" || mode === "countdownRamp") startRampTimer();
+
+  if(mode === "polyRhythm"){
+    const top = parseInt(document.getElementById("polyTop")?.value||3);
+    const bot = parseInt(document.getElementById("polyBottom")?.value||2);
+    MetEngine.startPoly({topNum:top,bottomNum:bot,measureBeats:measureCount});
+  } else {
+    if(isFresh){ MetEngine.start(); }
+    else        { MetEngine.resume(); }
+  }
+}
+
+function pauseMetronome(){
+  if(!isRunning) return;
+  _pendingPause = false;
+  isRunning     = false;
+  clearTimeout(rampTimerID);
+  pauseClock(); wasStopped = false;
+  ledDot.classList.remove("stopped"); ledDot.classList.add("paused");
+  setPauseIcon(); modeStatusPill.innerText="PAUSED";
+  MetEngine.pause();
+}
+
+function stopMetronome(){
+  _pendingPause = false; _engineReady = false;
+  isRunning     = false; clearTimeout(rampTimerID);
+  if(_usingNative) stopNative();
+  if(clockInterval) pauseClock();
+  _saveMusicSession();
+  accentFill.style.width="0%";
+  ramp.active=false; countdown.active=false;
+  fermata.active=false; fermata.inPause=false;
+  ledDot.classList.add("stopped"); ledDot.classList.remove("paused");
+  setPauseIcon(); modeStatusPill.innerText="STOPPED";
+  rampBarWrap.classList.remove("visible");
+  wasStopped = true;
+  MetEngine.stop();
+  if(elapsedSec >= 3){
+    showSessionSummary();
+  }
+}
+
+window.addEventListener("beforeunload",()=>{
+  if(elapsedSec >= 3) _saveMusicSession();
+});
+
+// ═══════════════════════════════════════════════
+//  STORAGE — save session + achievements
+// ═══════════════════════════════════════════════
+function showAchToast(a){
+  const t = document.getElementById("achToast");
+  document.getElementById("achToastIcon").textContent = a.icon||"🏆";
+  document.getElementById("achToastName").textContent = a.name;
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);
+}
+function showAchievements(list){
+  if(!list||!list.length) return;
+  list.forEach((a,i)=>setTimeout(()=>showAchToast(a),i*3400));
+}
+
+let _musicSessionSaved = false;
+
+function _saveMusicSession(){
+  if(elapsedSec < 3) return;
+  if(_musicSessionSaved) return;
+  _musicSessionSaved = true;
+  const mode   = _sessionMode;
+  let endBPM   = currentBPM;
+  if(mode==="practiceRamp")  endBPM = ramp.currentStepBPM||currentBPM;
+  if(mode==="countdownRamp") endBPM = countdown.currentStepBPM||currentBPM;
+  const payload = {
+    app_mode:"music", sub_mode:mode,
+    total_duration_sec:Math.round(elapsedSec), total_active_sec:Math.round(elapsedSec), total_rest_sec:0,
+    starting_cadence:_sessionStartBPM, ending_cadence:endBPM,
+    total_steps:beatCounter, sets_completed:0, sets_skipped:0,
+    flexible_mode_used:false, user_notes:"", sets_detail:[],
+    instrument: currentInstrument,
+    subdivision: parseInt(document.getElementById("subdivisionSelect")?.value)||1,
+    accent_pattern: accentPattern,
+  };
+  if(typeof MetStorage !== "undefined"){
+    MetStorage.saveSession(payload);
+    const kb = MetStorage.getStorageUsageKB();
+    if(kb > 4000){
+      const warn = document.getElementById("storageWarn");
+      if(warn){ warn.classList.add("show"); setTimeout(()=>warn.classList.remove("show"),6000); }
+    }
+    const now    = Date.now();
+    const newAch = MetStorage.getAchievements().filter(a=>{
+      if(!a.unlocked||!a.unlocked_date) return false;
+      return (now - new Date(a.unlocked_date).getTime()) < 5000;
+    });
+    if(newAch.length) showAchievements(newAch);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  DURATION MODE TOGGLE (Time vs Measures)
+//  prefix: "ramp" | "cd"
+// ═══════════════════════════════════════════════
+const _durMode = { ramp:"time", cd:"time" };
+
+function setDurMode(prefix, mode){
+  _durMode[prefix] = mode;
+  const timeBtn  = document.getElementById(prefix+"DurModeTime");
+  const measBtn  = document.getElementById(prefix+"DurModeMeasures");
+  const mmssRow  = document.getElementById(prefix+"MmssRow");
+  const measVal  = document.getElementById(prefix+"MeasuresVal");
+  if(timeBtn) timeBtn.classList.toggle("active", mode==="time");
+  if(measBtn) measBtn.classList.toggle("active", mode==="measures");
+  if(mmssRow) mmssRow.style.display = mode==="time" ? "flex" : "none";
+  if(measVal) measVal.style.display = mode==="measures" ? "" : "none";
+}
+
+/**
+ * Read the step duration for a given ramp prefix ("ramp" or "cd").
+ * Returns { dur: seconds (or measure count), stepUnit: "sec"|"measures" }
+ * — "dur" is always in SECONDS when stepUnit is "sec", matching what
+ * the rest of the ramp/countdown logic expects.
+ */
+function readStepDuration(prefix){
+  if(_durMode[prefix] === "measures"){
+    const val = parseInt(document.getElementById(prefix+"MeasuresVal")?.value || 8);
+    return { dur: Math.max(1, val), stepUnit: "measures" };
+  }
+  const min = parseInt(document.getElementById(prefix+"Min")?.value || 0);
+  const sec = parseInt(document.getElementById(prefix+"Sec")?.value || 0);
+  const totalSec = Math.max(1, min*60 + sec); // minimum 1 second
+  return { dur: totalSec, stepUnit: "sec" };
+}
+
+
+function updateDynamicPanel(){
+  const mode = modeSelect.value;
+  let html   = "";
+  if(mode === "practiceRamp"){
+    html=`<div class="param-group"><label>🏁 Start BPM</label><input type="number" id="rampStart" value="100" min="40" max="420" step="5"></div>
+    <div class="param-group"><label>🎯 End BPM</label><input type="number" id="rampEnd" value="160" min="40" max="420" step="5"></div>
+    <div class="param-group"><label>📈 Step (BPM)</label><input type="number" id="rampStep" value="5" min="1" max="40"></div>
+    <div class="dur-input-group">
+      <label>⏱ Step duration</label>
+      <div class="dur-mode-toggle">
+        <div class="dur-mode-btn active" id="rampDurModeTime" onclick="setDurMode('ramp','time')">Time</div>
+        <div class="dur-mode-btn" id="rampDurModeMeasures" onclick="setDurMode('ramp','measures')">Measures</div>
+      </div>
+      <div class="mmss-row" id="rampMmssRow">
+        <input type="number" class="mmss-field" id="rampMin" value="1" min="0" max="59">
+        <span class="mmss-colon">:</span>
+        <input type="number" class="mmss-field" id="rampSec" value="0" min="0" max="59">
+        <span class="mmss-unit-label">min:sec</span>
+      </div>
+      <input type="number" class="measures-field" id="rampMeasuresVal" value="8" min="1" max="999" style="display:none">
+    </div>
+    <div class="mode-info-line" style="width:100%">ℹ️ Holds <b>Start BPM</b> for <b>Step duration</b>, then adds <b>Step BPM</b> until <b>End BPM</b>.</div>`;
+  } else if(mode === "countdownRamp"){
+    html=`<div class="param-group"><label>⬆️ Start BPM</label><input type="number" id="cdStart" value="160" min="40" max="420" step="5"></div>
+    <div class="param-group"><label>⬇️ End BPM</label><input type="number" id="cdEnd" value="100" min="40" max="420" step="5"></div>
+    <div class="param-group"><label>📉 Step (BPM)</label><input type="number" id="cdStep" value="5" min="1" max="40"></div>
+    <div class="dur-input-group">
+      <label>⏱ Step duration</label>
+      <div class="dur-mode-toggle">
+        <div class="dur-mode-btn active" id="cdDurModeTime" onclick="setDurMode('cd','time')">Time</div>
+        <div class="dur-mode-btn" id="cdDurModeMeasures" onclick="setDurMode('cd','measures')">Measures</div>
+      </div>
+      <div class="mmss-row" id="cdMmssRow">
+        <input type="number" class="mmss-field" id="cdMin" value="1" min="0" max="59">
+        <span class="mmss-colon">:</span>
+        <input type="number" class="mmss-field" id="cdSec" value="0" min="0" max="59">
+        <span class="mmss-unit-label">min:sec</span>
+      </div>
+      <input type="number" class="measures-field" id="cdMeasuresVal" value="8" min="1" max="999" style="display:none">
+    </div>
+    <div class="mode-info-line" style="width:100%">ℹ️ Counts <b>Start → End BPM</b> by <b>Step</b> every <b>Step duration</b>, then holds at <b>End BPM</b>.</div>`;
+  } else if(mode === "polyRhythm"){
+    html=`<div class="param-group"><label>🟢 Base beats (bottom)</label><input type="number" id="polyBottom" value="2" min="1" max="9"></div>
+    <div class="param-group"><label>🟣 Overlay beats (top)</label><input type="number" id="polyTop" value="3" min="1" max="9"></div>
+    <div class="mode-info-line" style="width:100%">ℹ️ Two simultaneous rhythmic layers. <b>Green</b> = base (low pitch), <b>Purple</b> = overlay (high pitch).</div>`;
+  } else if(mode === "loopFermata"){
+    html=`<div class="param-group"><label>🔁 Beats per loop</label><input type="number" id="fermataBeats" value="4" min="1" max="32"></div>
+    <div class="param-group"><label>🤫 Pause (seconds)</label><input type="number" id="fermataPause" value="2" min="0.5" max="30" step="0.5"></div>
+    <div class="mode-info-line" style="width:100%">ℹ️ Plays <b>Beats per loop</b>, then silences for <b>Pause</b> seconds, then repeats.</div>`;
+  }
+  dynamicPanel.innerHTML = html;
+  modeLabelSpan.innerText = modeSelect.options[modeSelect.selectedIndex].text.toUpperCase().split(" ")[0];
+  if(mode === "polyRhythm"){
+    ["polyTop","polyBottom"].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.addEventListener("input", rebuildBeatDots);
+    });
+  }
+  // Re-apply duration mode toggle state (defaults to "time") for ramp modes
+  if(mode === "practiceRamp") setDurMode("ramp", _durMode.ramp);
+  if(mode === "countdownRamp") setDurMode("cd", _durMode.cd);
+}
+
+// ═══════════════════════════════════════════════
+//  TAP TEMPO
+// ═══════════════════════════════════════════════
+let tapTimes    = [];
+let tapResetTimer = null;
+const TAP_MIN   = 4;
+const TAP_MAX   = 8;
+const TAP_RESET_MS = 2000;
+const tapBtn    = document.getElementById("tapBtn");
+
+function updateTapLabel(count){
+  if(count === 0)         tapBtn.textContent = "TAP";
+  else if(count < TAP_MIN) tapBtn.textContent = `TAP (${count}/${TAP_MIN})`;
+  else                    tapBtn.textContent = "TAP ✓";
+}
+
+tapBtn.addEventListener("click", ()=>{
+  const now = performance.now();
+  clearTimeout(tapResetTimer);
+  if(tapTimes.length > 0 && (now - tapTimes[tapTimes.length-1]) > TAP_RESET_MS){
+    tapTimes = [];
+  }
+  tapTimes.push(now);
+  if(tapTimes.length > TAP_MAX) tapTimes.shift();
+  updateTapLabel(tapTimes.length);
+  if(tapTimes.length >= TAP_MIN){
+    const intervals = [];
+    for(let i=1;i<tapTimes.length;i++) intervals.push(tapTimes[i]-tapTimes[i-1]);
+    const avg = intervals.reduce((a,b)=>a+b) / intervals.length;
+    setBPM(Math.min(420, Math.max(40, Math.round(60000/avg))));
+  }
+  tapResetTimer = setTimeout(()=>{ tapTimes=[]; updateTapLabel(0); }, TAP_RESET_MS);
+});
+
+// ═══════════════════════════════════════════════
+//  EVENT LISTENERS
+// ═══════════════════════════════════════════════
+document.getElementById("bpmMinus5").onclick = ()=>setBPM(currentBPM-5);
+document.getElementById("bpmMinus1").onclick = ()=>setBPM(currentBPM-1);
+document.getElementById("bpmPlus1").onclick  = ()=>setBPM(currentBPM+1);
+document.getElementById("bpmPlus5").onclick  = ()=>setBPM(currentBPM+5);
+document.getElementById("bpmHalf").onclick   = ()=>setBPM(Math.round(currentBPM/2));
+document.getElementById("bpmDouble").onclick = ()=>setBPM(Math.min(420,currentBPM*2));
+bpmSlider.addEventListener("input", ()=>setBPM(parseInt(bpmSlider.value),false));
+playPauseBtn.onclick = ()=>{ if(isRunning) pauseMetronome(); else startMetronome(); };
+stopBtnEl.onclick    = stopMetronome;
+document.getElementById("accentPatternSelect").onchange = e=>{
+  accentPattern = e.target.value;
+  rebuildCustomAccentUI();
+  rebuildBeatDots();
+  MetEngine.setAccentPattern(accentPattern, customAccentBeats);
+};
+document.getElementById("measureMinus").onclick = ()=>{
+  measureCount = Math.max(1,measureCount-1); measureSpan.innerText=measureCount;
+  rebuildCustomAccentUI();
+  rebuildBeatDots(); MetEngine.setMeasureBeats(measureCount);
+  if(accentPattern==="custom") MetEngine.setAccentPattern("custom", customAccentBeats);
+};
+document.getElementById("measurePlus").onclick = ()=>{
+  measureCount = Math.min(16,measureCount+1); measureSpan.innerText=measureCount;
+  rebuildCustomAccentUI();
+  rebuildBeatDots(); MetEngine.setMeasureBeats(measureCount);
+  if(accentPattern==="custom") MetEngine.setAccentPattern("custom", customAccentBeats);
+};
+instrumentSel.onchange = e=>{
+  currentInstrument = e.target.value;
+  MetEngine.setInstrument(currentInstrument);
+};
+document.getElementById("subdivisionSelect").onchange = ()=>{
+  MetEngine.setSubdivisions(parseInt(document.getElementById("subdivisionSelect").value)||1);
+};
+modeSelect.onchange = ()=>{
+  if(isRunning){
+    const newMode     = modeSelect.value;
+    const newModeName = modeSelect.options[modeSelect.selectedIndex].text;
+    modeSelect.value  = _sessionMode;
+    showModeChangeDialog(newMode, newModeName);
+    return;
+  }
+  updateDynamicPanel();
+  rampBarWrap.classList.remove("visible");
+  rebuildBeatDots();
+};
+
+function showModeChangeDialog(newMode, newModeName){
+  const existing = document.getElementById("modeChangeDialog");
+  if(existing) existing.remove();
+  const wasRunning = isRunning;
+  if(wasRunning) pauseMetronome();
+  const dialog = document.createElement("div");
+  dialog.id = "modeChangeDialog";
+  dialog.style.cssText=`
+    position:fixed;inset:0;z-index:3000;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);padding:24px;`;
+  dialog.innerHTML=`
+    <div style="background:rgba(4,18,10,0.97);border:1px solid rgba(46,204,113,0.3);
+      border-radius:24px;padding:24px 22px;width:min(340px,100%);
+      display:flex;flex-direction:column;gap:14px;">
+      <div style="font-size:.95rem;font-weight:700;color:#8affc2;letter-spacing:.3px;">Switch Mode?</div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,0.65);line-height:1.6;">
+        You're switching to <b style="color:#2ecc71;">${newModeName}</b>.<br>
+        What would you like to do with the current session?
+      </div>
+      <button id="mdcEnd" style="width:100%;padding:13px;border-radius:14px;border:none;cursor:pointer;
+        background:rgba(46,204,113,0.18);color:#2ecc71;border:1px solid rgba(46,204,113,0.35);
+        font-size:.8rem;letter-spacing:.8px;font-family:'Segoe UI',sans-serif;
+        font-weight:600;text-transform:uppercase;">End Session &amp; Switch Mode</button>
+      <button id="mdcContinue" style="width:100%;padding:13px;border-radius:14px;border:none;cursor:pointer;
+        background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);
+        border:1px solid rgba(255,255,255,0.12);
+        font-size:.8rem;letter-spacing:.8px;font-family:'Segoe UI',sans-serif;
+        font-weight:600;text-transform:uppercase;">Resume Current Session</button>
+    </div>`;
+  document.body.appendChild(dialog);
+
+  function resumeSession(){ dialog.remove(); if(wasRunning) startMetronome(); }
+
+  dialog.querySelector("#mdcEnd").onclick = ()=>{
+    dialog.remove(); stopMetronome();
+    setTimeout(()=>{
+      modeSelect.value = newMode;
+      updateDynamicPanel();
+      rampBarWrap.classList.remove("visible");
+      rebuildBeatDots();
+      modeLabelSpan.innerText = newModeName.toUpperCase().split(" ")[0];
+    },300);
+  };
+  dialog.querySelector("#mdcContinue").onclick = resumeSession;
+  dialog.onclick = e=>{ if(e.target===dialog) resumeSession(); };
+}
+
+// ═══════════════════════════════════════════════
+//  POST-SESSION SUMMARY
+// ═══════════════════════════════════════════════
+// Diary data captured at session end — used if user taps "Yes" below
+let _lastSessionData = null;
+
+function showSessionSummary(){
+  if(elapsedSec < 3) return;
+  const fmtT=s=>{const h=~~(s/3600),m=~~((s%3600)/60),ss=~~(s%60);
+    return h>0?`${h}:${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`:`${m}:${String(ss).padStart(2,"0")}`;};
+  document.getElementById("sumDuration").textContent = fmtT(elapsedSec);
+  document.getElementById("sumBeats").textContent    = beatCounter;
+  document.getElementById("sumBPM").textContent      = currentBPM+" BPM";
+
+  const rampEl = document.getElementById("sumRampBreakdown");
+  if(_sessionMode==="practiceRamp" && ramp.phases && ramp.phases.length>0){
+    rampEl.style.display="block";
+    const totalRampBeats = ramp.phases.reduce((a,p)=>a+p.beats,0);
+    rampEl.innerHTML=`
+      <div style="font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.3);margin-bottom:6px;">
+        BPM BREAKDOWN · ${ramp.phases.length} steps · ${totalRampBeats} ramp beats
+      </div>
+      ${ramp.phases.map((p,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:5px 8px;margin-bottom:3px;background:rgba(255,255,255,0.04);
+          border-radius:8px;border-left:2px solid rgba(46,204,113,0.4);">
+          <span style="font-size:10px;color:rgba(46,204,113,0.9);font-weight:bold;">STEP ${i+1} — ${p.bpm} BPM</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.5);">${fmtT(p.durationSec)} · ${p.beats} beats</span>
+        </div>`).join("")}`;
+  } else {
+    rampEl.style.display="none";
+  }
+
+  // Diary data — prepared here (instead of a separate showDiaryNudge
+  // call) since the diary prompt is now just a section of this same
+  // screen, not an independently-triggered floating toast.
+  _lastSessionData = { duration:Math.round(elapsedSec), beats:beatCounter, bpm:currentBPM, mode:_sessionMode, ts:Date.now() };
+  // Reset diary section to its default "ask" state in case a previous
+  // session's summary left it in an answered state.
+  document.getElementById("sumDiarySection").style.display = "flex";
+
+  document.getElementById("sessionSummary").classList.add("show");
+}
+
+function hideSummary(){
+  document.getElementById("sessionSummary").classList.remove("show");
+}
+
+document.getElementById("sumClose").onclick   = hideSummary;
+document.getElementById("sumDismiss").onclick  = hideSummary;
+document.getElementById("sumViewDash").onclick = ()=>{
+  hideSummary(); window.location.href="dashboard.html?from=music";
+};
+
+// Diary prompt — now answered directly inside the summary screen.
+
+document.getElementById("nudgeYes").onclick = ()=>{
+  const encoded = encodeURIComponent(JSON.stringify(_lastSessionData));
+  window.location.href = "dashboard.html?diary=1&session="+encoded;
+};
+document.getElementById("nudgeNo").onclick = ()=>{
+  // Just hide the diary section (not the whole summary) so the user
+  // can still review their stats / tap "View Progress" afterward.
+  document.getElementById("sumDiarySection").style.display = "none";
+};
+
+// ═══════════════════════════════════════════════
+//  VOLUME CONTROL
+// ═══════════════════════════════════════════════
+const volTrack = document.getElementById("volumeTrack");
+const volFill  = document.getElementById("volumeFill");
+let volDrag    = false;
+
+function updateVol(x){
+  const r = volTrack.getBoundingClientRect();
+  volume  = Math.min(1, Math.max(0, (x-r.left)/r.width));
+  volFill.style.width = (volume*100)+"%";
+  MetEngine.setVolume(volume);
+}
+volTrack.addEventListener("mousedown",  e=>{ volDrag=true; updateVol(e.clientX); });
+document.addEventListener("mousemove",  e=>{ if(volDrag) updateVol(e.clientX); });
+document.addEventListener("mouseup",    ()=>volDrag=false);
+volTrack.addEventListener("touchstart", e=>{ volDrag=true; updateVol(e.touches[0].clientX); },{passive:true});
+document.addEventListener("touchmove",  e=>{ if(volDrag) updateVol(e.touches[0].clientX); },{passive:true});
+document.addEventListener("touchend",   ()=>volDrag=false);
+
+// ═══════════════════════════════════════════════
+//  WAVEFORM VISUALISER
+// ═══════════════════════════════════════════════
+(function(){
+  const canvas  = document.getElementById("waveformCanvas");
+  const wrap    = document.getElementById("waveformWrap");
+  const ctx2d   = canvas.getContext("2d");
+  const BARS    = 32, BAR_GAP = 3, BASE_H = 3;
+  const COLOR_ON  = "#2ecc71", COLOR_OFF = "rgba(46,204,113,0.18)", ACCENT_C = "#f39c12";
+  const targets = new Float32Array(BARS).fill(BASE_H);
+  const current = new Float32Array(BARS).fill(BASE_H);
+  let beatEnergy = 0;
+
+  function resize(){
+    const dpr = window.devicePixelRatio||1;
+    const r   = wrap.getBoundingClientRect();
+    canvas.width  = r.width*dpr; canvas.height = r.height*dpr;
+    ctx2d.scale(dpr,dpr);
+    canvas.style.width=r.width+"px"; canvas.style.height=r.height+"px";
+  }
+  resize(); window.addEventListener("resize",resize);
+
+  let idlePhase=0, activePhase=0;
+
+  function setIdleTargets(){
+    const h=wrap.getBoundingClientRect().height;
+    for(let i=0;i<BARS;i++){
+      const wave=Math.sin(idlePhase+i*0.45)*0.5+0.5;
+      targets[i]=BASE_H+wave*(h*0.18);
+    }
+    idlePhase+=0.018;
+  }
+
+  function setActiveTargets(energy){
+    const h=wrap.getBoundingClientRect().height;
+    const maxH=h*0.88;
+    for(let i=0;i<BARS;i++){
+      const centre=1-Math.abs((i/(BARS-1))-0.5)*2;
+      const wave1=Math.sin(activePhase+i*0.6)*0.5+0.5;
+      const wave2=Math.sin(activePhase*1.7+i*0.3)*0.3+0.7;
+      const noise=Math.random()*0.15;
+      targets[i]=Math.min(maxH,Math.max(BASE_H,BASE_H+(wave1*wave2+noise+energy*centre*1.2)*maxH*0.6));
+    }
+    activePhase+=0.055;
+  }
+
+  function draw(){
+    const W=canvas.width/(window.devicePixelRatio||1);
+    const H=canvas.height/(window.devicePixelRatio||1);
+    const barW=(W-(BARS-1)*BAR_GAP)/BARS;
+    ctx2d.clearRect(0,0,W,H);
+    const speed=isRunning?0.22:0.08;
+    for(let i=0;i<BARS;i++) current[i]+=(targets[i]-current[i])*speed;
+    for(let i=0;i<BARS;i++){
+      const x=i*(barW+BAR_GAP);
+      const bh=current[i];
+      const y=(H-bh)/2;
+      const r=Math.min(barW/2,bh/2,4);
+      if(isRunning){
+        const grad=ctx2d.createLinearGradient(0,y,0,y+bh);
+        grad.addColorStop(0,beatEnergy>0.5?ACCENT_C:"#4fffaa");
+        grad.addColorStop(1,"#1a8a4a");
+        ctx2d.fillStyle=grad;
+      } else {
+        ctx2d.fillStyle=COLOR_OFF;
+      }
+      ctx2d.beginPath(); ctx2d.roundRect(x,y,barW,bh,r); ctx2d.fill();
+    }
+    beatEnergy=Math.max(0,beatEnergy-0.04);
+  }
+
+  function loop(){
+    if(isRunning) setActiveTargets(beatEnergy); else setIdleTargets();
+    draw(); requestAnimationFrame(loop);
+  }
+  loop();
+
+  // Spike waveform on every beat
+  const _origFlash = window.flashPulse;
+  window.flashPulse = function(){
+    beatEnergy=1.0;
+    if(_origFlash) _origFlash();
+  };
+})();
+
+// ═══════════════════════════════════════════════
+//  VOICE BRIDGE
+// ═══════════════════════════════════════════════
+window.MetVoice = {
+  app       : "music",
+  start     : ()=>startMetronome(),
+  stop      : ()=>stopMetronome(),
+  pause     : ()=>{ if(isRunning) pauseMetronome(); },
+  resume    : ()=>{ if(!isRunning) startMetronome(); },
+  setBPM    : v=>setBPM(v),
+  getBPM    : ()=>currentBPM,
+  isRunning : ()=>isRunning,
+  getMode   : ()=>modeSelect.value,
+  setMode   : id=>{ modeSelect.value=id; updateDynamicPanel(); },
+  setInstr  : name=>{ if(instrumentSel) instrumentSel.value=name; currentInstrument=name; MetEngine.setInstrument(name); },
+  tapTempo  : ()=>document.getElementById("tapBtn").click(),
+  changeMode: ()=>{},
+};
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+updateDynamicPanel();
+rebuildCustomAccentUI();
+rebuildBeatDots();
+setBPM(120);
+
+if(typeof MetOnboarding !== "undefined"){
+  const _tourForce = new URLSearchParams(window.location.search).get("replayTour")==="1";
+  MetOnboarding.init("music", { forceReplay: _tourForce });
+}
+</script>
+</body>
+</html>

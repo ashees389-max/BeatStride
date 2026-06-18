@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#030810">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>BeatStride — My Progress</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --green      : #2ecc71;
+  --green-dim  : rgba(46,204,113,0.15);
+  --green-border: rgba(46,204,113,0.25);
+  --bg         : #04100a;
+  --panel      : rgba(8,20,12,0.85);
+  --card       : rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+  --text       : #e8f5ee;
+  --text-dim   : rgba(255,255,255,0.45);
+  --text-faint : rgba(255,255,255,0.22);
+  --accent     : #a78bfa;    /* purple — music */
+  --orange     : #f59e0b;    /* streak */
+  --red        : #ef4444;
+}
+
+html,body{
+  width:100%;
+  height:100%;           /* fixed height so .app can be constrained */
+  overflow:hidden;       /* prevent body-level scroll — .body div scrolls instead */
+  background: radial-gradient(circle at 15% 10%, rgba(0,255,120,0.03), transparent 40%),
+              radial-gradient(circle at 85% 80%, rgba(100,60,255,0.02), transparent 40%),
+              linear-gradient(to bottom, #04140d, #000 60%);
+  font-family:'Segoe UI','Inter',system-ui,sans-serif;
+  color:var(--text);
+  overscroll-behavior:none;
+}
+
+/* ── LAYOUT ── */
+.app{
+  width:100%;
+  max-width:100%;
+  height:100svh;         /* FIXED height — not min-height — this is the key fix */
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;       /* clip, let .body handle scroll */
+}
+
+/* ── TOP NAV ── */
+.top-nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(4,16,10,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--card-border);
+  padding:12px 14px 10px;
+  display:flex;align-items:center;gap:10px;
+}
+.nav-back{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--card);border:1px solid var(--card-border);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-dim);font-size:15px;cursor:pointer;
+  text-decoration:none;transition:background 0.2s;flex-shrink:0;
+}
+@media(hover:hover){.nav-back:hover{background:rgba(255,255,255,0.08);}}
+.nav-title{font-size:15px;font-weight:700;letter-spacing:-0.3px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-storage-badge{
+  font-size:8px;color:var(--text-faint);letter-spacing:0.5px;
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:20px;padding:2px 7px;white-space:nowrap;flex-shrink:0;
+}
+
+/* ── TAB BAR ── */
+.tab-bar{
+  display:flex;border-bottom:1px solid var(--card-border);
+  background:rgba(4,16,10,0.7);
+  overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{
+  flex:1;                    /* distribute evenly across full width */
+  min-width:0;               /* allow shrinking */
+  padding:10px 6px;
+  font-size:9px;letter-spacing:0.5px;text-transform:uppercase;
+  color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;
+  transition:color 0.2s,border-color 0.2s;white-space:nowrap;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;
+}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+
+/* ── SCROLL BODY ── */
+.body{
+  flex:1;
+  min-height:0;           /* critical: allows flex child to shrink and scroll */
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding:12px 14px 20px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.body::-webkit-scrollbar{display:none;}
+
+/* ── TAB PANELS ── */
+.tab-panel{display:none;}
+.tab-panel.active{display:flex;flex-direction:column;gap:14px;}
+
+/* ── CARDS ── */
+.card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:18px;
+  padding:16px;
+}
+.card-title{
+  font-size:9px;letter-spacing:1.5px;color:var(--green);
+  text-transform:uppercase;margin-bottom:12px;
+  display:flex;align-items:center;gap:6px;
+}
+.card-title-icon{font-size:14px;}
+
+/* ── HOME: hero stats row ── */
+.hero-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+}
+.hero-stat{
+  background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
+  border-radius:14px;padding:12px 10px;text-align:center;
+}
+.hero-stat-val{font-size:22px;font-weight:800;color:var(--text);line-height:1;margin-bottom:3px;}
+.hero-stat-val.green{color:var(--green);}
+.hero-stat-val.orange{color:var(--orange);}
+.hero-stat-val.purple{color:var(--accent);}
+.hero-stat-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+
+/* ── STREAK CARD ── */
+.streak-hero{
+  display:flex;align-items:center;gap:16px;
+  padding:4px 0 8px;
+}
+.streak-flame{font-size:40px;line-height:1;}
+.streak-info{flex:1;}
+.streak-num{font-size:36px;font-weight:900;color:var(--orange);line-height:1;}
+.streak-label{font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;}
+.streak-sub{font-size:9px;color:var(--text-faint);margin-top:4px;}
+.streak-dead{
+  display:inline-block;font-size:9px;color:var(--red);
+  background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);
+  border-radius:20px;padding:2px 8px;margin-top:6px;
+}
+
+/* ── HEATMAP ── */
+.heatmap{
+  display:flex;flex-direction:column;gap:3px;margin-top:4px;
+}
+.heatmap-row{display:flex;gap:3px;align-items:center;}
+.heatmap-day-label{
+  font-size:7px;color:var(--text-faint);
+  width:22px;text-align:right;flex-shrink:0;
+}
+.heatmap-cells{display:flex;gap:3px;flex-wrap:nowrap;}
+.heatmap-cell{
+  width:11px;height:11px;border-radius:2px;
+  background:rgba(255,255,255,0.06);flex-shrink:0;
+  cursor:default;position:relative;
+}
+.heatmap-cell.l1{background:rgba(46,204,113,0.25);}
+.heatmap-cell.l2{background:rgba(46,204,113,0.5);}
+.heatmap-cell.l3{background:rgba(46,204,113,0.75);}
+.heatmap-cell.l4{background:#2ecc71;}
+.heatmap-month-labels{
+  display:flex;gap:3px;padding-left:25px;margin-bottom:2px;
+  font-size:7px;color:var(--text-faint);
+}
+.heatmap-month-label{width:11px;text-align:center;flex-shrink:0;overflow:visible;white-space:nowrap;}
+
+/* ── CHARTS ── */
+.chart-wrap{position:relative;width:100%;overflow:hidden;}
+.chart-svg{width:100%;display:block;}
+
+/* bar chart */
+.bar-chart-wrap{display:flex;flex-direction:row;gap:4px;align-items:flex-end;}
+.bar-y-scale{
+  display:flex;flex-direction:column;justify-content:space-between;
+  height:80px;padding:0 4px 0 0;
+  font-size:8px;color:rgba(255,255,255,0.3);
+  letter-spacing:.5px;text-align:right;
+  min-width:32px;flex-shrink:0;
+}
+.bar-chart-area{display:flex;align-items:flex-end;gap:3px;height:72px;flex:1;}
+.bar-chart-area{
+  display:flex;align-items:flex-end;gap:3px;height:80px;
+  border-bottom:1px solid var(--card-border);
+  padding-bottom:4px;
+}
+.bar-col{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;gap:2px;
+  height:100%;min-width:0;
+}
+.bar{
+  width:100%;border-radius:3px 3px 0 0;
+  background:linear-gradient(to top, rgba(46,204,113,0.4), rgba(46,204,113,0.7));
+  min-height:2px;transition:height 0.3s ease;cursor:default;
+}
+@media(hover:hover){.bar:hover{background:linear-gradient(to top,rgba(46,204,113,0.6),rgba(46,204,113,0.9));}}
+.bar-label{font-size:6px;color:var(--text-faint);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}
+
+/* line chart */
+.line-chart-container{width:100%;overflow:hidden;position:relative;}
+.line-chart-container svg{width:100%;height:90px;display:block;}
+
+/* donut chart */
+.donut-wrap{display:flex;align-items:center;gap:16px;}
+.donut-svg{flex-shrink:0;}
+.donut-legend{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.donut-legend-item{display:flex;align-items:center;gap:6px;}
+.donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.donut-lbl{font-size:9px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.donut-cnt{font-size:9px;color:var(--text);font-family:monospace;}
+
+/* ── PERSONAL BESTS ── */
+.pb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pb-item{
+  background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
+  border-radius:12px;padding:10px 12px;
+}
+.pb-val{font-size:20px;font-weight:800;color:var(--green);line-height:1;margin-bottom:3px;}
+.pb-label{font-size:8px;color:var(--text-dim);letter-spacing:0.5px;}
+
+/* ── ACHIEVEMENTS ── */
+.ach-progress-bar{
+  height:5px;background:rgba(255,255,255,0.1);border-radius:5px;margin-bottom:12px;overflow:hidden;
+}
+.ach-progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--green),#a8ff78);
+  border-radius:5px;transition:width 0.5s ease;
+}
+.ach-progress-label{
+  font-size:9px;color:var(--text-dim);text-align:right;margin-top:4px;margin-bottom:10px;
+}
+.ach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ach-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 6px;border-radius:12px;
+  border:1px solid var(--card-border);background:rgba(0,0,0,0.2);
+  cursor:default;transition:background 0.2s;
+  position:relative;
+}
+.ach-item.unlocked{
+  background:rgba(46,204,113,0.08);
+  border-color:rgba(46,204,113,0.3);
+}
+.ach-item:hover .ach-tooltip{display:block;}
+.ach-icon{font-size:22px;line-height:1;}
+.ach-item:not(.unlocked) .ach-icon{filter:grayscale(1);opacity:0.3;}
+.ach-name{font-size:7px;color:var(--text-dim);text-align:center;line-height:1.2;}
+.ach-item.unlocked .ach-name{color:var(--green);}
+.ach-date{font-size:6px;color:var(--text-faint);text-align:center;}
+.ach-tooltip{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:rgba(4,20,12,0.98);border:1px solid var(--green-border);
+  border-radius:8px;padding:6px 10px;
+  font-size:8px;color:var(--text);white-space:nowrap;z-index:50;
+  pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.5);
+}
+
+/* ── HISTORY ── */
+.history-filters{
+  display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;
+}
+.filter-btn{
+  padding:5px 11px;border-radius:20px;font-size:9px;letter-spacing:0.5px;
+  border:1px solid var(--card-border);background:var(--card);
+  color:var(--text-dim);cursor:pointer;transition:background 0.2s,border-color 0.2s;
+}
+.filter-btn.active{background:var(--green-dim);border-color:var(--green-border);color:var(--green);}
+.session-card{
+  background:rgba(0,0,0,0.25);border:1px solid var(--card-border);
+  border-radius:14px;overflow:hidden;margin-bottom:8px;
+}
+.session-hdr{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;
+  transition:background 0.2s;
+}
+@media(hover:hover){.session-hdr:hover{background:rgba(255,255,255,0.04);}}
+.session-mode-badge{
+  font-size:16px;width:34px;height:34px;border-radius:10px;
+  background:var(--card);border:1px solid var(--card-border);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.session-info{flex:1;min-width:0;}
+.session-name{font-size:11px;color:var(--text);font-weight:600;margin-bottom:2px;}
+.session-meta{font-size:9px;color:var(--text-dim);}
+.session-stats{text-align:right;flex-shrink:0;}
+.session-dur{font-size:12px;color:var(--green);font-weight:700;font-family:monospace;}
+.session-steps{font-size:9px;color:var(--text-faint);}
+.session-chev{color:var(--text-faint);font-size:12px;margin-left:4px;transition:transform 0.2s;}
+.session-body{display:none;padding:0 14px 12px;border-top:1px solid var(--card-border);}
+.session-body.open{display:block;}
+.session-detail-row{
+  display:flex;justify-content:space-between;padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.session-detail-row:last-child{border:none;}
+.sd-label{font-size:8.5px;color:var(--text-dim);}
+.sd-val{font-size:9px;color:var(--text);font-family:monospace;}
+.session-sets-label{font-size:8px;color:var(--text-faint);letter-spacing:1px;text-transform:uppercase;margin:8px 0 5px;}
+.set-mini{
+  background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.12);
+  border-radius:8px;padding:6px 10px;margin-bottom:4px;
+}
+.set-mini-row{display:flex;justify-content:space-between;font-size:8px;}
+.set-mini-row .k{color:var(--text-faint);}
+.set-mini-row .v{color:var(--text);font-family:monospace;}
+.session-note{
+  margin-top:8px;width:100%;
+  background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
+  border-radius:8px;padding:7px 10px;color:var(--text);
+  font-size:10px;resize:none;outline:none;font-family:'Segoe UI',sans-serif;
+  transition:border-color 0.2s;
+}
+.session-note:focus{border-color:var(--green-border);}
+.session-delete-btn{
+  background:transparent;border:1px solid rgba(231,76,60,0.3);
+  color:rgba(231,76,60,0.7);border-radius:8px;padding:5px 12px;
+  font-size:9px;letter-spacing:0.5px;cursor:pointer;
+  transition:all 0.2s;font-family:inherit;
+}
+.session-delete-btn:hover{background:rgba(231,76,60,0.1);border-color:rgba(231,76,60,0.6);color:#e74c3c;}
+
+.note-save-btn{
+  margin-top:5px;float:right;
+  background:var(--green-dim);border:1px solid var(--green-border);
+  border-radius:8px;padding:4px 12px;color:var(--green);
+  font-size:9px;cursor:pointer;transition:background 0.2s;
+}
+@media(hover:hover){.note-save-btn:hover{background:rgba(46,204,113,0.25);}}
+.history-empty{
+  text-align:center;padding:40px 20px;
+  font-size:13px;color:var(--text-faint);
+}
+.history-load-more{
+  width:100%;padding:11px;margin-top:4px;
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:12px;color:var(--text-dim);font-size:10px;
+  letter-spacing:1px;cursor:pointer;transition:background 0.2s;
+}
+@media(hover:hover){.history-load-more:hover{background:rgba(255,255,255,0.08);}}
+
+/* ── SETTINGS ── */
+.settings-section-title{
+  font-size:8px;letter-spacing:1.5px;color:var(--text-faint);
+  text-transform:uppercase;margin-bottom:10px;
+}
+.setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;background:rgba(0,0,0,0.25);
+  border:1px solid var(--card-border);border-radius:12px;margin-bottom:7px;
+}
+.setting-row-info{flex:1;}
+.setting-row-label{font-size:11px;color:var(--text);margin-bottom:2px;}
+.setting-row-desc{font-size:8.5px;color:var(--text-dim);}
+.setting-input{
+  background:rgba(0,0,0,0.4);border:1px solid var(--card-border);
+  border-radius:8px;padding:6px 10px;color:var(--text);
+  font-size:11px;outline:none;width:90px;text-align:center;
+  font-family:'Segoe UI',sans-serif;transition:border-color 0.2s;
+}
+.setting-input:focus{border-color:var(--green-border);}
+.setting-select{
+  background:rgba(0,0,0,0.4);border:1px solid var(--card-border);
+  border-radius:8px;padding:6px 10px;color:var(--text);
+  font-size:10px;outline:none;cursor:pointer;transition:border-color 0.2s;
+}
+.setting-select:focus{border-color:var(--green-border);}
+.toggle-switch{
+  width:40px;height:22px;border-radius:22px;
+  background:rgba(255,255,255,0.1);border:1px solid var(--card-border);
+  position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-switch.on{background:rgba(46,204,113,0.3);border-color:var(--green-border);}
+.toggle-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:14px;height:14px;border-radius:50%;
+  background:rgba(255,255,255,0.45);transition:left 0.2s,background 0.2s;
+}
+.toggle-switch.on::after{left:21px;background:var(--green);}
+.name-save-btn{
+  background:var(--green-dim);border:1px solid var(--green-border);
+  border-radius:8px;padding:6px 12px;color:var(--green);
+  font-size:10px;cursor:pointer;transition:background 0.2s;white-space:nowrap;
+}
+@media(hover:hover){.name-save-btn:hover{background:rgba(46,204,113,0.22);}}
+.data-btn{
+  width:100%;padding:12px;border-radius:12px;
+  font-size:11px;letter-spacing:0.5px;cursor:pointer;transition:background 0.2s;
+  text-align:center;margin-bottom:7px;
+}
+.data-btn.export{background:var(--green-dim);border:1px solid var(--green-border);color:var(--green);}
+@media(hover:hover){.data-btn.export:hover{background:rgba(46,204,113,0.22);}}
+.data-btn.import{background:var(--card);border:1px solid var(--card-border);color:var(--text-dim);}
+@media(hover:hover){.data-btn.import:hover{background:rgba(255,255,255,0.08);}}
+.data-btn.danger{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgba(239,68,68,0.75);}
+@media(hover:hover){.data-btn.danger:hover{background:rgba(239,68,68,0.15);}}
+.storage-bar-wrap{margin-top:4px;}
+.storage-bar{height:4px;border-radius:4px;background:rgba(255,255,255,0.1);overflow:hidden;margin-top:6px;}
+.storage-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),#a8ff78);border-radius:4px;}
+.storage-text{font-size:8px;color:var(--text-faint);margin-top:4px;}
+/* Voice command rows */
+.vc-group-label{font-size:8px;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;margin:10px 0 5px;font-weight:600;}
+.vc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:4px;gap:8px;}
+.vc-cmd{font-size:10px;color:var(--green);font-weight:600;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:5px;padding:2px 7px;white-space:nowrap;}
+.vc-desc{font-size:9px;color:var(--text-dim);text-align:right;flex:1;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(4,20,12,0.96);border:1px solid var(--green-border);
+  border-radius:12px;padding:10px 18px;
+  font-size:11px;color:var(--text);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.3s,transform 0.3s;
+  z-index:999;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── MISC ── */
+.divider{height:1px;background:var(--card-border);margin:4px 0;}
+.empty-state{text-align:center;padding:32px 16px;color:var(--text-faint);font-size:13px;}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════════════════════════════ */
+
+/* Desktop: cap at 480px, centre, restore body scroll */
+@media(min-width:520px){
+  html,body{
+    overflow-y:auto;   /* restore body scroll on desktop */
+    height:auto;
+  }
+  .app{
+    max-width:480px;
+    height:auto;       /* let content define height on desktop */
+    min-height:100svh;
+    margin:0 auto;
+    overflow:visible;
+    box-shadow:0 0 60px rgba(0,0,0,0.5);
+  }
+  .body{
+    overflow-y:visible; /* desktop scrolls at body level not div level */
+    flex:none;
+  }
+}
+
+/* ── 1. VERY NARROW: Galaxy Z Fold5 (≤350px) ─────────── */
+@media(max-width:350px){
+  .app{max-width:100%;}
+  .top-nav{padding:12px 12px 8px;}
+  .tab-bar{padding:0 8px;}
+  .tab{padding:10px 6px;font-size:6.5px;letter-spacing:0.5px;}
+  .tab-content{padding:14px 12px;}
+  .card{padding:12px 12px;}
+  .hero-stat-val{font-size:2rem;}
+  .hero-stat-label{font-size:8px;}
+  .stat-card{padding:10px 10px;}
+  .stat-val{font-size:1.4rem;}
+  .setting-row{padding:10px 12px;}
+  .setting-row-label{font-size:11px;}
+}
+
+/* ── 2. SHORT HEIGHT: iPhone SE / Nest Hub (≤680px) ────── */
+@media(max-height:680px){
+  .top-nav{padding:10px 18px 8px;}
+  .tab-bar{position:sticky;} /* already sticky - ensure no extra height */
+  .tab{padding:9px 8px;font-size:7px;}
+  .tab-content{padding:12px 14px;}
+  .card{margin-bottom:10px;padding:14px 14px;}
+  .section-title{font-size:10px;margin-bottom:10px;}
+  .hero-block{margin-bottom:12px;}
+  .hero-stat-val{font-size:2.4rem;}
+  .streak-card{padding:12px 14px;}
+  .chart-wrap{height:70px;}
+}
+
+/* ── 3. LARGE TABLET PORTRAIT: Surface Pro / Zenbook ───── 
+   (≥768px wide AND ≥900px tall)
+   Key fix: don't vertically center — align to top.
+   Widen the container so it fills the screen.           */
+@media(min-width:768px) and (min-height:900px){
+  html,body{
+    height:auto;
+    overflow-y:auto;
+    overflow:visible;
+  }
+  .app{
+    max-width:min(680px,92vw);
+    height:auto;
+    min-height:100svh;
+    margin:0 auto;
+    overflow:visible;
+  }
+  .body{
+    overflow-y:visible;
+    flex:none;
+  }
+  /* Scale up typography and spacing */
+  .top-nav{padding:18px 24px 14px;}
+  .nav-title{font-size:18px;}
+  .tab{font-size:9px;padding:13px 12px;}
+  .card{padding:18px 18px;margin-bottom:14px;}
+  .card-title{font-size:14px;}
+  .hero-stat-val{font-size:3.4rem;}
+  .hero-stat-label{font-size:11px;}
+  .setting-row{padding:14px 16px;}
+  .setting-row-label{font-size:13px;}
+  .setting-row-desc{font-size:10px;}
+  .session-card{padding:14px 16px;}
+}
+
+/* ── 4. NEST HUB: Short landscape (≥768px wide, ≤680px tall) ── */
+@media(min-width:768px) and (max-height:680px){
+  html,body{height:auto;overflow-y:auto;}
+  .app{
+    max-width:min(620px,90vw);
+    height:auto;
+    min-height:100svh;
+    margin:0 auto;
+    overflow:visible;
+  }
+  .body{overflow-y:visible;flex:none;}
+  .top-nav{padding:10px 20px 8px;}
+  .nav-title{font-size:15px;}
+  .tab{padding:8px 10px;font-size:7px;}
+  .card{padding:12px 14px;margin-bottom:10px;}
+  .hero-stat-val{font-size:2.2rem;}
+}
+
+
+/* ═══════════════════════════════════
+   DIARY TAB
+═══════════════════════════════════ */
+
+/* Entry form */
+.diary-entry-form{
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:18px;padding:16px 16px 14px;
+}
+.diary-form-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.diary-form-tab{
+  flex:1;padding:7px 0;border-radius:10px;text-align:center;
+  font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;border:1px solid var(--card-border);
+  color:var(--text-dim);background:transparent;
+  transition:background 0.2s,color 0.2s,border-color 0.2s;
+}
+.diary-form-tab.active{
+  background:rgba(46,204,113,0.12);color:var(--green);
+  border-color:rgba(46,204,113,0.3);
+}
+
+/* Guided questions */
+.guided-questions{display:flex;flex-direction:column;gap:10px;}
+.guided-q{display:flex;flex-direction:column;gap:6px;}
+.guided-q-label{font-size:0.72rem;color:var(--text-dim);letter-spacing:0.3px;}
+.guided-q-emojis{display:flex;gap:8px;flex-wrap:wrap;}
+.emoji-btn{
+  font-size:1.4rem;width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,0.05);border:2px solid transparent;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:border-color 0.15s,transform 0.15s;
+}
+@media(hover:hover){.emoji-btn:hover{transform:scale(1.12);}}
+.emoji-btn.selected{border-color:var(--green);background:rgba(46,204,113,0.12);}
+.guided-q-text{
+  width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
+  border-radius:10px;padding:9px 12px;color:white;font-size:0.78rem;
+  font-family:'Segoe UI',sans-serif;resize:none;outline:none;
+  min-height:60px;transition:border-color 0.2s;
+}
+.guided-q-text:focus{border-color:rgba(46,204,113,0.4);}
+
+/* Manual textarea */
+.manual-area{
+  width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
+  border-radius:12px;padding:12px 14px;color:white;font-size:0.82rem;
+  font-family:'Segoe UI',sans-serif;resize:none;outline:none;
+  min-height:120px;line-height:1.6;transition:border-color 0.2s;
+}
+.manual-area:focus{border-color:rgba(46,204,113,0.4);}
+
+/* Session context badge */
+.session-context{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.15);
+  border-radius:10px;margin-bottom:12px;
+}
+.session-context-icon{font-size:0.9rem;}
+.session-context-text{font-size:0.68rem;color:rgba(46,204,113,0.8);letter-spacing:0.3px;}
+
+/* Save button */
+.diary-save-btn{
+  width:100%;padding:12px 0;border-radius:12px;
+  background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.35);
+  color:var(--green);font-size:0.75rem;letter-spacing:1.5px;font-weight:600;
+  cursor:pointer;text-transform:uppercase;transition:background 0.2s;
+  font-family:'Segoe UI',sans-serif;margin-top:12px;
+}
+@media(hover:hover){.diary-save-btn:hover{background:rgba(46,204,113,0.28);}}
+
+/* ── Diary entries — DAY-GROUPED ── */
+.diary-entries{display:flex;flex-direction:column;gap:8px;}
+.diary-empty{
+  text-align:center;padding:32px 16px;color:var(--text-faint);
+  font-size:0.78rem;line-height:1.8;
+}
+
+/* Day group card */
+.diary-day-card{
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:18px;overflow:hidden;
+  transition:border-color 0.2s;
+}
+@media(hover:hover){.diary-day-card:hover{border-color:rgba(255,255,255,0.12);}}
+
+/* Day header — tap to expand */
+.diary-day-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:13px 16px;cursor:pointer;user-select:none;
+  transition:background 0.15s;
+}
+@media(hover:hover){.diary-day-header:hover{background:rgba(255,255,255,0.03);}}
+.diary-day-date{
+  font-size:0.82rem;font-weight:700;color:white;letter-spacing:0.3px;
+}
+.diary-day-right{display:flex;align-items:center;gap:10px;}
+.diary-day-count{
+  font-size:0.62rem;letter-spacing:1px;color:rgba(46,204,113,0.7);
+  background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.2);
+  border-radius:20px;padding:2px 9px;white-space:nowrap;
+}
+.diary-day-moods{font-size:0.85rem;letter-spacing:2px;}
+.diary-day-chev{
+  font-size:0.72rem;color:var(--text-faint);
+  transition:transform 0.22s;flex-shrink:0;
+}
+.diary-day-card.open .diary-day-chev{transform:rotate(180deg);}
+
+/* Notes list — hidden by default */
+.diary-day-notes{display:none;border-top:1px solid var(--card-border);}
+.diary-day-card.open .diary-day-notes{display:block;}
+
+/* Individual note row */
+.diary-note-row{
+  padding:11px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  cursor:pointer;transition:background 0.15s;
+}
+.diary-note-row:last-child{border-bottom:none;}
+@media(hover:hover){.diary-note-row:hover{background:rgba(255,255,255,0.03);}}
+
+/* Note collapsed preview */
+.diary-note-preview{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.diary-note-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.diary-note-number{
+  font-size:0.6rem;color:var(--text-faint);letter-spacing:0.5px;
+  min-width:18px;flex-shrink:0;
+}
+.diary-note-mood{font-size:1rem;flex-shrink:0;}
+.diary-note-snippet{
+  font-size:0.72rem;color:var(--text-dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  min-width:0;flex:1;
+}
+.diary-note-time{
+  font-size:0.6rem;color:var(--text-faint);white-space:nowrap;flex-shrink:0;
+}
+.diary-note-chev{
+  font-size:0.6rem;color:var(--text-faint);flex-shrink:0;
+  transition:transform 0.2s;
+}
+.diary-note-row.open .diary-note-chev{transform:rotate(180deg);}
+
+/* Note expanded body */
+.diary-note-body{
+  display:none;margin-top:10px;padding-top:10px;
+  border-top:1px solid rgba(255,255,255,0.05);
+}
+.diary-note-row.open .diary-note-body{display:block;}
+.diary-session-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.diary-session-chip{
+  background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.15);
+  border-radius:8px;padding:2px 8px;font-size:0.6rem;color:rgba(46,204,113,0.75);
+  letter-spacing:0.5px;
+}
+.diary-answer{font-size:0.76rem;color:var(--text-dim);line-height:1.6;margin-bottom:5px;}
+.diary-answer-label{
+  font-size:0.6rem;color:var(--text-faint);text-transform:uppercase;
+  letter-spacing:1px;display:block;margin-bottom:1px;
+}
+.diary-note-actions{
+  display:flex;gap:8px;margin-top:8px;padding-top:8px;
+  border-top:1px solid rgba(255,255,255,0.04);
+}
+.diary-action-btn{
+  font-size:0.65rem;color:var(--text-faint);background:none;border:none;
+  cursor:pointer;padding:3px 8px;border-radius:6px;
+  transition:color 0.2s,background 0.2s;font-family:'Segoe UI',sans-serif;
+}
+@media(hover:hover){.diary-action-btn:hover{color:white;background:rgba(255,255,255,0.08);}}
+@media(hover:hover){.diary-action-btn.del:hover{color:#ff6b6b;}}
+
+</style>
+</head>
+<body>
+<!-- ── Shared scripts ── -->
+<script src="storage.js"></script>
+
+<div class="app">
+
+  <!-- TOP NAV -->
+  <div class="top-nav">
+    <a class="nav-back" id="navBackBtn" href="metronomeItem.html" title="Back">←</a>
+    <div class="nav-title">My Progress</div>
+    <div class="nav-storage-badge" id="storageBadge">0 KB</div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <div class="tab active" data-tab="home">Home</div>
+    <div class="tab" data-tab="history">History</div>
+    <div class="tab" data-tab="achievements">Achievements</div>
+    
+    <div class="tab" data-tab="settings">Settings</div>
+    <div class="tab" data-tab="diary">Reflections</div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- ══════════════ HOME TAB ══════════════ -->
+    <div class="tab-panel active" id="tab-home">
+
+      <!-- User greeting -->
+      <div class="card" style="padding:14px 16px;">
+        <div style="font-size:18px;font-weight:700;margin-bottom:2px;" id="greetingText">Welcome back 👋</div>
+        <div style="font-size:11px;color:var(--text-dim);" id="greetingSub">Keep the rhythm going.</div>
+      </div>
+
+      <!-- Quick stats row -->
+      <div class="hero-row">
+        <div class="hero-stat">
+          <div class="hero-stat-val green" id="hsTotalSessions">0</div>
+          <div class="hero-stat-label">Sessions</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val orange" id="hsStreak">0</div>
+          <div class="hero-stat-label">Day Streak</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val purple" id="hsTotalHours">0h</div>
+          <div class="hero-stat-label">Practice Time</div>
+        </div>
+      </div>
+
+      <!-- Streak card -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🔥</span>Current Streak</div>
+        <div class="streak-hero">
+          <div class="streak-flame" id="streakEmoji">🔥</div>
+          <div class="streak-info">
+            <div class="streak-num" id="streakNum">0</div>
+            <div class="streak-label">DAYS IN A ROW</div>
+            <div class="streak-sub" id="streakSub">Start your streak today!</div>
+            <div class="streak-dead" id="streakDeadBadge" style="display:none">Streak lost — start again today!</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:10px;color:var(--text-dim);">Best</div>
+            <div style="font-size:18px;font-weight:800;color:var(--orange);" id="streakBest">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity heatmap -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📅</span>Activity — Last 10 Weeks</div>
+        <div class="heatmap-month-labels" id="hmMonthLabels"></div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+
+      <!-- Session duration bar chart -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📊</span>Session Duration — Last 14 Days</div>
+        <div class="bar-chart-wrap">
+          <div class="bar-chart-area" id="barChart"></div>
+        </div>
+      </div>
+
+      <!-- Cadence trend line chart -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📈</span>Cadence Trend — Last 20 Sessions</div>
+        <div class="line-chart-container" id="lineChartWrap"></div>
+      </div>
+
+      <!-- Mode usage donut -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🍩</span>Mode Usage</div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100" id="donutSvg"></svg>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
+
+      <!-- Personal Bests -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🏆</span>Personal Bests</div>
+        <div class="pb-grid">
+          <div class="pb-item">
+            <div class="pb-val" id="pbLongest">0</div>
+            <div class="pb-label">Longest Session (min)</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-val" id="pbHighCad">0</div>
+            <div class="pb-label">Highest Cadence (SPM)</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-val" id="pbCad1min">0</div>
+            <div class="pb-label">Best Cadence — 1 Min</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-val" id="pbCad5min">0</div>
+            <div class="pb-label">Best Cadence — 5 Min</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-val" id="pbMaxSets">0</div>
+            <div class="pb-label">Most Sets in Session</div>
+          </div>
+          <div class="pb-item">
+            <div class="pb-val" id="pbBpmMusic">0</div>
+            <div class="pb-label">Highest BPM (Music)</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /home -->
+
+    <!-- ══════════════ HISTORY TAB ══════════════ -->
+    <div class="tab-panel" id="tab-history">
+      <div class="history-filters">
+        <div class="filter-btn active" data-filter="all">All</div>
+        <div class="filter-btn" data-filter="athletic">🏃 Athletic</div>
+        <div class="filter-btn" data-filter="music">🎵 Music</div>
+      </div>
+      <div id="historyList"></div>
+      <button class="history-load-more" id="loadMoreBtn" style="display:none">LOAD MORE</button>
+    </div>
+
+    <!-- ══════════════ ACHIEVEMENTS TAB ══════════════ -->
+    <div class="tab-panel" id="tab-achievements">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎖</span>Achievement Progress</div>
+        <div class="ach-progress-bar">
+          <div class="ach-progress-fill" id="achProgressFill" style="width:0%"></div>
+        </div>
+        <div class="ach-progress-label" id="achProgressLabel">0 / 25 unlocked</div>
+        <div class="ach-grid" id="achGrid"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════ SETTINGS TAB ══════════════ -->
+    <div class="tab-panel" id="tab-settings">
+
+      <!-- Profile -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">👤</span>Profile</div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Your Name</div>
+            <div class="setting-row-desc">Shown on the home screen</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="setting-input" type="text" id="setUserName" placeholder="Your name" maxlength="20"/>
+            <button class="name-save-btn" id="saveNameBtn">SAVE</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Default Mode</div>
+            <div class="setting-row-desc">Skip entry screen on launch</div>
+          </div>
+          <select class="setting-select" id="setDefaultMode">
+            <option value="">Ask every time</option>
+            <option value="athletic">Athletic</option>
+            <option value="music">Music</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Athletic defaults -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🏃</span>Athletic Defaults</div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Default Cadence</div>
+            <div class="setting-row-desc">Starting SPM for new sessions</div>
+          </div>
+          <input class="setting-input" type="number" id="setAthCadence" min="40" max="420"/>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Flexible Mode</div>
+            <div class="setting-row-desc">Allow mid-set cadence changes</div>
+          </div>
+          <div class="toggle-switch" id="toggleFlex"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Voice Announcements</div>
+            <div class="setting-row-desc">Audio cues for set start, rest, and session complete</div>
+          </div>
+          <div class="toggle-switch on" id="toggleVoice"></div>
+        </div>
+      </div>
+
+      <!-- Music defaults -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎵</span>Music Defaults</div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Default BPM</div>
+            <div class="setting-row-desc">Starting BPM for music mode</div>
+          </div>
+          <input class="setting-input" type="number" id="setMusBpm" min="40" max="420"/>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Default Instrument</div>
+            <div class="setting-row-desc">Preferred click sound</div>
+          </div>
+          <select class="setting-select" id="setInstrument">
+            <option value="woodblock">Woodblock</option>
+            <option value="cowbell">Cowbell</option>
+            <option value="clave">Clave</option>
+            <option value="hihat">Hi-hat</option>
+            <option value="bongo">Bongo</option>
+            <option value="bell">Bell</option>
+            <option value="clap">Clap</option>
+            <option value="techno">Techno Beep</option>
+            <option value="clock">Clock</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-info">
+            <div class="setting-row-label">Volume</div>
+            <div class="setting-row-desc">Default playback volume</div>
+          </div>
+          <input class="setting-input" type="number" id="setVolume" min="0" max="100" step="5"/>
+        </div>
+      </div>
+
+      <!-- Data management -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">💾</span>Data Management</div>
+        <button class="data-btn export" id="exportBtn">⬇ Export Backup (JSON)</button>
+        <button class="data-btn import" id="importBtn">⬆ Import Backup</button>
+        <input type="file" id="importFile" accept=".json" style="display:none"/>
+        <div class="divider" style="margin:10px 0;"></div>
+        <div class="storage-bar-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:9px;color:var(--text-dim);">Storage Used</div>
+            <div class="storage-text" id="storageText">0 KB / ~5 MB</div>
+          </div>
+          <div class="storage-bar"><div class="storage-bar-fill" id="storageBarFill" style="width:0%"></div></div>
+        </div>
+        <div class="divider" style="margin:10px 0;"></div>
+        <button class="data-btn danger" id="clearHistoryBtn">🗑 Clear Session History</button>
+        <button class="data-btn danger" id="clearAllBtn">⚠ Factory Reset (Clear All Data)</button>
+      </div>
+
+      <!-- Onboarding Tour -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎯</span>Onboarding Tour</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">
+          Replay the guided tour to learn all the features and voice commands for each mode.
+        </div>
+        <button class="data-btn export" id="replayTourAthBtn">▶ Replay Athletic Tour</button>
+        <button class="data-btn import" id="replayTourMusBtn" style="margin-top:7px;">▶ Replay Music Tour</button>
+      </div>
+
+
+
+    </div><!-- /settings -->
+
+    <!-- ════════════════════════ REFLECTIONS TAB ════════════════════════ -->
+    <div class="tab-panel" id="tab-diary">
+
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="font-size:1rem;font-weight:700;color:white;letter-spacing:-0.3px;">Reflections</div>
+        <div style="font-size:0.65rem;color:var(--text-faint);letter-spacing:1px;margin-top:3px;">YOUR PERSONAL JOURNAL</div>
+      </div>
+      <!-- New entry form -->
+      <div class="diary-entry-form card">
+        <div class="diary-form-tabs">
+          <div class="diary-form-tab active" data-form="guided" id="dTabGuided">✦ Guided</div>
+          <div class="diary-form-tab" data-form="manual" id="dTabManual">✎ Manual</div>
+        </div>
+
+        <!-- Session context (shown when arriving from ?diary=1) -->
+        <div class="session-context" id="sessionContext" style="display:none">
+          <span class="session-context-icon">🎵</span>
+          <span class="session-context-text" id="sessionContextText">Session: —</span>
+        </div>
+
+        <!-- Guided form -->
+        <div id="guidedForm">
+          <div class="guided-questions">
+            <div class="guided-q">
+              <div class="guided-q-label">How was your session?
+                <span style="color:var(--text-faint);font-size:0.62rem;float:right" id="moodCount">0/180</span>
+              </div>
+              <textarea class="guided-q-text" id="guidedMood"
+                maxlength="180" rows="3"
+                placeholder="How did the session go? What worked, what didn't? Any wins today?"></textarea>
+            </div>
+            <div class="guided-q">
+              <div class="guided-q-label">Did you hit your goal?
+                <span style="color:var(--text-faint);font-size:0.62rem;float:right" id="goalCount">0/180</span>
+              </div>
+              <textarea class="guided-q-text" id="guidedGoal"
+                maxlength="180" rows="3"
+                placeholder="What was your goal today? Did you reach it? What got in the way?"></textarea>
+            </div>
+            <div class="guided-q">
+              <div class="guided-q-label">Plan for next session?
+                <span style="color:var(--text-faint);font-size:0.62rem;float:right" id="planCount">0/180</span>
+              </div>
+              <textarea class="guided-q-text" id="guidedPlan"
+                maxlength="180" rows="3"
+                placeholder="What will you focus on next time? Any specific targets?"></textarea>
+            </div>
+
+            <!-- Optional mood emoji — secondary, at the bottom -->
+            <div class="guided-q">
+              <div class="guided-q-label">Overall mood <span style="color:var(--text-faint);font-size:0.62rem">(optional)</span></div>
+              <div class="guided-q-emojis" data-q="mood">
+                <div class="emoji-btn" data-val="🌱">🌱</div>
+                <div class="emoji-btn" data-val="🙂">🙂</div>
+                <div class="emoji-btn" data-val="💪">💪</div>
+                <div class="emoji-btn" data-val="🔥">🔥</div>
+                <div class="emoji-btn" data-val="😌">😌</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual form -->
+        <div id="manualForm" style="display:none">
+          <textarea class="manual-area" id="manualText" placeholder="Write whatever's on your mind…"></textarea>
+        </div>
+
+        <button class="diary-save-btn" id="diarySaveBtn">Save Entry</button>
+      </div>
+
+      <!-- Past entries -->
+      <div class="diary-entries" id="diaryEntriesList">
+        <div class="diary-empty">No entries yet.<br>Complete a session and write your first one ✍️</div>
+      </div>
+
+    </div><!-- /tab-diary -->
+
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function fmtMS(s){const m=~~(s/60),ss=~~(s%60);return`${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;}
+function fmtHMS(s){const h=~~(s/3600),m=~~((s%3600)/60),ss=~~(s%60);return`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;}
+function fmtDate(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtDateTime(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+
+         d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+
+function showToast(msg,dur=2500){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),dur);
+}
+
+const MODE_ICONS={
+  regular:"🏃", timedRun:"⏱", fixedInterval:"🔁",
+  customSemi:"🎛", customFull:"⚡", cadenceRamp:"📈",
+  practiceRamp:"📈", countdownRamp:"📉", polyRhythm:"🥁",
+  loopFermata:"𝄐"
+};
+const MUSIC_MODE_ICONS={
+  regular:"🎵", practiceRamp:"📈", countdownRamp:"📉",
+  polyRhythm:"🥁", loopFermata:"𝄐"
+};
+const MODE_NAMES={
+  regular:"Regular", timedRun:"Timed Run", fixedInterval:"Fixed Interval",
+  customSemi:"Custom Semi", customFull:"Custom Full", cadenceRamp:"Cadence Ramp",
+  practiceRamp:"Practice Ramp", countdownRamp:"Countdown Ramp",
+  polyRhythm:"Poly Rhythm", loopFermata:"Loop Fermata"
+};
+const DONUT_COLORS=[
+  "#2ecc71","#a78bfa","#f59e0b","#38bdf8","#fb7185",
+  "#34d399","#c084fc","#fbbf24","#60a5fa","#f472b6"
+];
+
+// ═══════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
+    if(tab.dataset.tab==="home"){
+      requestAnimationFrame(()=>requestAnimationFrame(renderLineChart));
+    }
+    if(tab.dataset.tab==="history") renderHistory();
+    if(tab.dataset.tab==="achievements") renderAchievements();
+    if(tab.dataset.tab==="settings") loadSettings();
+    if(tab.dataset.tab==="diary") renderDiary();
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+//  DIARY MODULE — Day-grouped architecture
+//  Entries stored flat. Rendered as Day cards → Note rows.
+// ═══════════════════════════════════════════════════════
+(function DiaryModule(){
+
+  const STORE_KEY = "musicElete_diary";
+  let _entries  = [];
+  let _formMode = "guided";
+  let _moods    = {};
+  let _sessionCtx = null;
+
+  function loadEntries(){
+    try{ const r=localStorage.getItem(STORE_KEY); _entries=r?JSON.parse(r):[]; }
+    catch(e){ _entries=[]; }
+  }
+  function saveEntries(){
+    try{ localStorage.setItem(STORE_KEY,JSON.stringify(_entries)); }
+    catch(e){ console.warn("Diary save failed",e); }
+  }
+
+  function dayKey(ts){
+    const d=new Date(ts);
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function fmtDayLabel(ts){
+    const d=new Date(ts), now=new Date();
+    const yest=new Date(); yest.setDate(now.getDate()-1);
+    if(dayKey(d)===dayKey(now))   return "Today";
+    if(dayKey(d)===dayKey(yest))  return "Yesterday";
+    return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+  }
+  function fmtTime(ts){
+    return new Date(ts).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  }
+  function fmtDur(sec){
+    const m=Math.floor(sec/60),s=sec%60;
+    return m>0?m+"m "+s+"s":s+"s";
+  }
+  function noteSnippet(e){
+    if(e.type==="manual") return e.text?e.text.slice(0,55)+(e.text.length>55?"…":""):"—";
+    const parts=[];
+    if(e.feeling) parts.push(e.feeling);
+    if(e.goal)    parts.push(e.goal);
+    if(e.plan)    parts.push(e.plan);
+    const j=parts.join(" · ");
+    return j?j.slice(0,55)+(j.length>55?"…":""):(e.mood||"")+" "+(e.goal||"");
+  }
+
+  function groupByDay(){
+    const map=new Map();
+    _entries.forEach((e,gi)=>{
+      const dk=dayKey(e.ts);
+      if(!map.has(dk)) map.set(dk,{dayKey:dk,dayTs:e.ts,notes:[]});
+      map.get(dk).notes.push({...e,_gi:gi});
+    });
+    return [...map.values()].sort((a,b)=>b.dayTs-a.dayTs);
+  }
+
+  function checkURLContext(){
+    const p=new URLSearchParams(window.location.search);
+    if(p.get("diary")==="1"){
+      try{ _sessionCtx=JSON.parse(decodeURIComponent(p.get("session")||"null")); }
+      catch(e){ _sessionCtx=null; }
+      const tab=document.querySelector('.tab[data-tab="diary"]');
+      if(tab) tab.click();
+    }
+  }
+
+  function render(){ loadEntries(); renderForm(); renderEntries(); }
+
+  function renderForm(){
+    const ctx=document.getElementById("sessionContext");
+    const ctxText=document.getElementById("sessionContextText");
+    if(_sessionCtx&&ctx){
+      ctx.style.display="flex";
+      ctxText.textContent=`After your ${fmtDur(_sessionCtx.duration)} session · ${_sessionCtx.bpm} BPM`;
+    } else if(ctx){ ctx.style.display="none"; }
+    _moods={};
+    document.querySelectorAll(".emoji-btn").forEach(b=>b.classList.remove("selected"));
+    ["guidedMood","guidedGoal","guidedPlan","manualText"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value="";
+    });
+  }
+
+  function renderEntries(){
+    const list=document.getElementById("diaryEntriesList");
+    if(!list) return;
+    const days=groupByDay();
+    if(!days.length){
+      list.innerHTML='<div class="diary-empty">No entries yet.<br>Complete a session and write your first one ✍️</div>';
+      return;
+    }
+    list.innerHTML=days.map((day,di)=>{
+      const n=day.notes.length;
+      const moodSummary=day.notes.map(e=>e.mood||"").filter(Boolean).join(" ");
+      const notesHTML=day.notes.map((note,ni)=>{
+        const gi=note._gi;
+        const strip=note.session?`
+          <div class="diary-session-strip">
+            <span class="diary-session-chip">⏱ ${fmtDur(note.session.duration)}</span>
+            <span class="diary-session-chip">🎵 ${note.session.bpm} BPM</span>
+            <span class="diary-session-chip">${note.session.mode||"music"}</span>
+          </div>`:"";
+        let body="";
+        if(note.type==="guided"){
+          body=(note.mood||note.goal?`<div class="diary-answer"><span class="diary-answer-label">Mood</span>${note.mood||""} ${note.goal||""}</div>`:"")
+              +(note.feeling?`<div class="diary-answer"><span class="diary-answer-label">How it felt</span>${note.feeling}</div>`:"")
+              +(note.plan?`<div class="diary-answer"><span class="diary-answer-label">Next session</span>${note.plan}</div>`:"");
+        } else {
+          body=`<div class="diary-answer" style="white-space:pre-wrap">${note.text||""}</div>`;
+        }
+        return `
+        <div class="diary-note-row" id="dNote_${di}_${ni}" onclick="toggleDiaryNote('${di}_${ni}')">
+          <div class="diary-note-preview">
+            <div class="diary-note-left">
+              <span class="diary-note-number">#${n-ni}</span>
+              <span class="diary-note-mood">${note.mood||"📝"}</span>
+              <span class="diary-note-snippet">${noteSnippet(note)}</span>
+            </div>
+            <span class="diary-note-time">${fmtTime(note.ts)}</span>
+            <span class="diary-note-chev">▼</span>
+          </div>
+          <div class="diary-note-body">
+            ${strip}${body}
+            <div class="diary-note-actions">
+              <button class="diary-action-btn del" onclick="event.stopPropagation();deleteDiaryEntry(${gi})">🗑 Delete</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+      return `
+      <div class="diary-day-card" id="dDay${di}">
+        <div class="diary-day-header" onclick="toggleDiaryDay(${di})">
+          <div class="diary-day-date">${fmtDayLabel(day.dayTs)}</div>
+          <div class="diary-day-right">
+            <span class="diary-day-moods">${moodSummary}</span>
+            <span class="diary-day-count">${n} ${n===1?"note":"notes"}</span>
+            <span class="diary-day-chev">▼</span>
+          </div>
+        </div>
+        <div class="diary-day-notes">${notesHTML}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function saveEntry(){
+    const entry={ts:Date.now(),type:_formMode,session:_sessionCtx||null};
+    if(_formMode==="guided"){
+      const feeling=document.getElementById("guidedMood")?.value.trim();
+      const goal   =document.getElementById("guidedGoal")?.value.trim();
+      const plan   =document.getElementById("guidedPlan")?.value.trim();
+      if(!feeling&&!goal&&!plan&&!_moods.mood){ showToast("Add at least a thought or a mood ✍️"); return; }
+      entry.mood=_moods.mood||"";
+      entry.feeling=feeling; entry.goal=goal; entry.plan=plan;
+    } else {
+      const text=document.getElementById("manualText")?.value.trim();
+      if(!text){ showToast("Write something first ✍️"); return; }
+      entry.text=text;
+    }
+    _entries.unshift(entry);
+    saveEntries(); _sessionCtx=null;
+    renderForm(); renderEntries();
+    showToast("Entry saved 📖");
+  }
+
+  window.toggleDiaryDay  = (di)=>{ const c=document.getElementById("dDay"+di); if(c) c.classList.toggle("open"); };
+  window.toggleDiaryNote = (id)=>{ const r=document.getElementById("dNote_"+id); if(r) r.classList.toggle("open"); };
+  window.deleteDiaryEntry= (gi)=>{
+    if(!confirm("Delete this note?")) return;
+    _entries.splice(gi,1); saveEntries(); renderEntries();
+  };
+  window.renderDiary=render;
+
+  document.querySelectorAll(".diary-form-tab").forEach(t=>{
+    t.addEventListener("click",()=>{
+      _formMode=t.dataset.form;
+      document.querySelectorAll(".diary-form-tab").forEach(x=>x.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("guidedForm").style.display=_formMode==="guided"?"":"none";
+      document.getElementById("manualForm").style.display=_formMode==="manual"?"":"none";
+    });
+  });
+  document.querySelectorAll(".guided-q-emojis").forEach(group=>{
+    group.querySelectorAll(".emoji-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        group.querySelectorAll(".emoji-btn").forEach(b=>b.classList.remove("selected"));
+        btn.classList.add("selected"); _moods[group.dataset.q]=btn.dataset.val;
+      });
+    });
+  });
+  const saveBtn=document.getElementById("diarySaveBtn");
+  if(saveBtn) saveBtn.addEventListener("click",saveEntry);
+
+  // Character counters for guided textareas
+  [["guidedMood","moodCount"],["guidedGoal","goalCount"],["guidedPlan","planCount"]].forEach(([id,cid])=>{
+    const el=document.getElementById(id);
+    const ct=document.getElementById(cid);
+    if(el&&ct){
+      el.addEventListener("input",()=>{ ct.textContent=el.value.length+"/180"; });
+    }
+  });
+
+  checkURLContext();
+
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  HOME TAB
+// ═══════════════════════════════════════════════════════════
+function renderHome(){
+  const ov = MetStorage.getOverview();
+  const s  = MetStorage.getStreaks();
+  const pb = MetStorage.getPersonalBests();
+
+  // Greeting
+  const name = ov.user_name;
+  const hour = new Date().getHours();
+  const greet = hour<12 ? "Good morning" : hour<17 ? "Good afternoon" : "Good evening";
+  document.getElementById("greetingText").textContent =
+    name ? `${greet}, ${name} 👋` : `${greet} 👋`;
+  document.getElementById("greetingSub").textContent =
+    ov.total_sessions > 0
+      ? `${ov.total_sessions} session${ov.total_sessions!==1?"s":""} · ${ov.total_practice_time} total · Most used: ${ov.most_used_mode}`
+      : "Complete your first session to see your stats.";
+
+  // Quick stats
+  document.getElementById("hsTotalSessions").textContent = ov.total_sessions;
+  document.getElementById("hsStreak").textContent = ov.streak_alive ? ov.current_streak : 0;
+  const hours = Math.floor(s.total_practice_minutes/60);
+  const mins  = s.total_practice_minutes%60;
+  document.getElementById("hsTotalHours").textContent = hours>0 ? `${hours}h` : `${mins}m`;
+
+  // Streak card
+  const streak = ov.streak_alive ? ov.current_streak : 0;
+  document.getElementById("streakNum").textContent  = streak;
+  document.getElementById("streakBest").textContent = ov.longest_streak;
+  document.getElementById("streakEmoji").textContent= streak>0?"🔥":"🌱";
+  document.getElementById("streakSub").textContent  =
+    streak > 0 ? `${streak} day${streak!==1?"s":""} — keep it up!` : "Start your streak today";
+  document.getElementById("streakDeadBadge").style.display =
+    (s.last_session_date && !ov.streak_alive && ov.longest_streak > 0) ? "inline-block" : "none";
+
+  // Personal bests
+  document.getElementById("pbLongest").textContent = pb.longest_session_minutes > 0 ? pb.longest_session_minutes.toFixed(1) : "—";
+  document.getElementById("pbHighCad").textContent = pb.highest_cadence_ever || "—";
+  document.getElementById("pbCad1min").textContent = pb.highest_cadence_1min || "—";
+  document.getElementById("pbCad5min").textContent = pb.highest_cadence_5min || "—";
+  document.getElementById("pbMaxSets").textContent = pb.most_sets_single_session || "—";
+  document.getElementById("pbBpmMusic").textContent= pb.highest_bpm_music || "—";
+
+  renderHeatmap();
+  renderBarChart();
+  renderLineChart();
+  renderDonut();
+  updateStorageBadge();
+}
+
+// ── HEATMAP ──────────────────────────────────────────────
+function renderHeatmap(){
+  const actMap = MetStorage.getActivityMap(70);  // 10 weeks = 70 days
+  const hm     = document.getElementById("heatmap");
+  const mlEl   = document.getElementById("hmMonthLabels");
+  hm.innerHTML = ""; mlEl.innerHTML = "";
+
+  // Build 7 rows (Mon–Sun), each with 10 cells (10 weeks)
+  const today = new Date();
+  // Start from 69 days ago → pad to start of week
+  const days=[];
+  for(let i=69;i>=0;i--){
+    const d=new Date(today);d.setDate(today.getDate()-i);
+    days.push(d);
+  }
+  // Group into weeks (columns)
+  const weeks=[];
+  for(let i=0;i<days.length;i+=7) weeks.push(days.slice(i,i+7));
+
+  // Day label rows
+  const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  for(let row=0;row<7;row++){
+    const rowEl=document.createElement("div");
+    rowEl.className="heatmap-row";
+    const lbl=document.createElement("div");
+    lbl.className="heatmap-day-label";
+    lbl.textContent=dayNames[row];
+    rowEl.appendChild(lbl);
+    const cells=document.createElement("div");
+    cells.className="heatmap-cells";
+    weeks.forEach(week=>{
+      const d=week[row];
+      const cell=document.createElement("div");
+      cell.className="heatmap-cell";
+      if(d){
+        const ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        const cnt=actMap[ds]||0;
+        if(cnt===1) cell.classList.add("l1");
+        else if(cnt===2) cell.classList.add("l2");
+        else if(cnt===3) cell.classList.add("l3");
+        else if(cnt>=4) cell.classList.add("l4");
+        cell.title=ds+(cnt?` — ${cnt} session${cnt!==1?"s":""}` :"");
+      }
+      cells.appendChild(cell);
+    });
+    rowEl.appendChild(cells);
+    hm.appendChild(rowEl);
+  }
+
+  // Month labels above heatmap
+  const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const labelEl=document.createElement("div");
+  labelEl.style.cssText="display:flex;gap:3px;padding-left:25px;margin-bottom:2px;";
+  weeks.forEach((week,wi)=>{
+    const d=week[0];
+    const sp=document.createElement("div");
+    sp.style.cssText="width:11px;font-size:7px;color:var(--text-faint);text-align:center;flex-shrink:0;overflow:visible;white-space:nowrap;";
+    // Show month label on first week of each month
+    if(d && (wi===0 || d.getDate()<=7)){
+      sp.textContent=monthNames[d.getMonth()];
+    }
+    labelEl.appendChild(sp);
+  });
+  mlEl.replaceWith(labelEl);
+}
+
+// ── BAR CHART (14 days duration) ─────────────────────────
+function renderBarChart(){
+  const data=MetStorage.getDailyDurations(14);
+  const wrap=document.getElementById("barChart").parentElement;
+  document.getElementById("barChart").innerHTML="";
+  const chart=document.getElementById("barChart");
+  const rawMax=Math.max(...data.map(d=>d.duration_min),1);
+  const hasSessions = data.some(d=>d.duration_min>0);
+  if(!hasSessions){
+    chart.innerHTML='<div style="font-size:10px;color:var(--text-faint);text-align:center;padding:16px 10px;">No sessions in the last 14 days</div>';
+    return;
+  }
+  const CHART_H = 72;
+  const dayLabels=["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+  // Round the max up to a clean number so scale labels are meaningful.
+  // Steps: use 5m increments up to 60m, then 15m increments above that.
+  function niceMax(v){
+    if(v<=5)  return 5;
+    if(v<=60) return Math.ceil(v/5)*5;
+    return Math.ceil(v/15)*15;
+  }
+  const yMax = niceMax(rawMax);
+
+  // Build 5 evenly-spaced round labels (top → 0) so the scale is readable
+  const steps = 4; // gives labels at 100%, 75%, 50%, 25%, 0%
+  const scaleEl = wrap.querySelector(".bar-y-scale") || document.createElement("div");
+  scaleEl.className="bar-y-scale";
+  // CSS already does space-between across the element height;
+  // 5 spans = top label, 3 intermediates, bottom "0"
+  scaleEl.innerHTML = Array.from({length:steps+1},(_,i)=>{
+    const val = Math.round(yMax * (steps-i) / steps);
+    return `<span>${val>0?val+"m":"0"}</span>`;
+  }).join("");
+  if(!wrap.querySelector(".bar-y-scale")) wrap.insertBefore(scaleEl, chart);
+
+  data.forEach(d=>{
+    const col=document.createElement("div");
+    col.className="bar-col";
+    const bar=document.createElement("div");
+    bar.className="bar";
+    // Minimum visible height of 3px for any session that happened,
+    // so even a 1-minute session shows as a real bar (not a flat line).
+    const px = d.duration_min > 0
+      ? Math.max(3, Math.round((d.duration_min / yMax) * CHART_H))
+      : 0;
+    bar.style.height=px+"px";
+    bar.title=`${d.date}: ${d.duration_min.toFixed(1)} min`;
+    const date=new Date(d.date+"T00:00:00");
+    const lbl=document.createElement("div");
+    lbl.className="bar-label";
+    lbl.textContent=dayLabels[date.getDay()];
+    col.appendChild(bar); col.appendChild(lbl);
+    chart.appendChild(col);
+  });
+}
+
+// ── LINE CHART (cadence trend) ────────────────────────────
+function renderLineChart(){
+  const data=MetStorage.getCadenceTrend(20);
+  const wrap=document.getElementById("lineChartWrap");
+  wrap.innerHTML="";
+  if(data.length<2){
+    wrap.innerHTML='<div style="font-size:10px;color:var(--text-faint);text-align:center;padding:20px 10px;">Complete 2+ sessions to see your cadence trend</div>';
+    return;
+  }
+  function _draw(){
+    const W = wrap.getBoundingClientRect().width || wrap.offsetWidth || 300;
+    if(W < 10){ requestAnimationFrame(_draw); return; }
+    const H = 90;
+
+    // Left margin reserves space for Y-axis labels so they never
+    // sit on top of the plotted data — this is the main fix for
+    // the "105 SPM overlapping the line" issue seen in the screenshot.
+    const LEFT   = 42;   // px reserved for Y-axis labels
+    const RIGHT  = 6;
+    const TOP    = 10;
+    const BOTTOM = 10;
+    const plotW  = W - LEFT - RIGHT;
+    const plotH  = H - TOP - BOTTOM;
+
+    wrap.innerHTML="";
+    const vals = data.map(d=>d.avg_cadence);
+    const rawMin = Math.min(...vals);
+    const rawMax = Math.max(...vals);
+
+    // Round min/max to clean 10-SPM boundaries so labels are meaningful.
+    // Add padding so no data point touches the very top or bottom edge.
+    function niceFloor(v){ return Math.floor(v/10)*10; }
+    function niceCeil(v) { return Math.ceil(v/10)*10;  }
+    const yMin = rawMin === rawMax
+      ? rawMin - 10
+      : Math.max(0, niceFloor(rawMin) - 10);
+    const yMax = rawMin === rawMax
+      ? rawMax + 10
+      : niceCeil(rawMax) + 10;
+    const yRange = yMax - yMin;
+
+    // Map data → SVG coords, fully within the plot area
+    const px = i  => (LEFT + (i/(data.length-1)) * plotW).toFixed(1);
+    const py = v  => (TOP  + (1 - (v - yMin)/yRange) * plotH).toFixed(1);
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("width","100%"); svg.setAttribute("height",H);
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    svg.setAttribute("preserveAspectRatio","none");
+
+    // Subtle horizontal grid lines at 4 evenly-spaced values
+    const labelStyle = "font-size:8px;fill:rgba(255,255,255,0.35);font-family:'Segoe UI',sans-serif;";
+    const gridCount  = 4;  // 0%, 33%, 66%, 100%
+    for(let i=0; i<=gridCount; i++){
+      const frac = i / gridCount;
+      const gVal = Math.round(yMin + frac * yRange);
+      const gy   = (TOP + (1-frac) * plotH).toFixed(1);
+
+      // Grid line — only inside the plot area (starts at LEFT)
+      const gl = document.createElementNS("http://www.w3.org/2000/svg","line");
+      gl.setAttribute("x1", LEFT); gl.setAttribute("x2", W - RIGHT);
+      gl.setAttribute("y1", gy);   gl.setAttribute("y2", gy);
+      gl.setAttribute("stroke","rgba(255,255,255,0.06)");
+      gl.setAttribute("stroke-width","1");
+      svg.appendChild(gl);
+
+      // Y-axis label — sits in the left margin, vertically centred on grid line
+      const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
+      // Anchor to the right edge of the left margin so labels align neatly
+      lbl.setAttribute("x", (LEFT - 4).toString());
+      lbl.setAttribute("y", (parseFloat(gy) + 3).toFixed(1));
+      lbl.setAttribute("text-anchor","end");
+      lbl.setAttribute("style", labelStyle);
+      lbl.textContent = gVal + " SPM";
+      svg.appendChild(lbl);
+    }
+
+    // Area fill
+    const points = data.map((d,i)=>`${px(i)},${py(d.avg_cadence)}`).join(" ");
+    const area   = document.createElementNS("http://www.w3.org/2000/svg","polygon");
+    area.setAttribute("points",`${px(0)},${(TOP+plotH).toFixed(1)} ${points} ${px(data.length-1)},${(TOP+plotH).toFixed(1)}`);
+    area.setAttribute("fill","rgba(46,204,113,0.08)");
+    svg.appendChild(area);
+
+    // Line
+    const line = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+    line.setAttribute("points", points);
+    line.setAttribute("fill","none"); line.setAttribute("stroke","#2ecc71");
+    line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linejoin","round");
+    svg.appendChild(line);
+
+    // Dots with tooltips
+    data.forEach((d,i)=>{
+      const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      c.setAttribute("cx", px(i)); c.setAttribute("cy", py(d.avg_cadence)); c.setAttribute("r","3");
+      c.setAttribute("fill","#2ecc71");
+      const t = document.createElementNS("http://www.w3.org/2000/svg","title");
+      t.textContent=`${d.date}: ${d.avg_cadence} SPM`;
+      c.appendChild(t); svg.appendChild(c);
+    });
+
+    wrap.appendChild(svg);
+  }
+  requestAnimationFrame(()=>requestAnimationFrame(_draw));
+}
+
+// ── DONUT CHART (mode usage) ──────────────────────────────
+function renderDonut(){
+  const data=MetStorage.getModeUsage().slice(0,6);
+  const svg=document.getElementById("donutSvg");
+  const legend=document.getElementById("donutLegend");
+  svg.innerHTML=""; legend.innerHTML="";
+  const total=data.reduce((a,d)=>a+d.count,0);
+  if(total===0){
+    svg.innerHTML='<text x="50" y="55" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="9">No data</text>';
+    return;
+  }
+  const cx=50,cy=50,r=38,ri=24;
+  let startAngle=-Math.PI/2;
+  data.forEach((d,i)=>{
+    const slice=(d.count/total)*Math.PI*2;
+    const endAngle=startAngle+slice;
+    const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
+    const ix1=cx+ri*Math.cos(startAngle),iy1=cy+ri*Math.sin(startAngle);
+    const ix2=cx+ri*Math.cos(endAngle),  iy2=cy+ri*Math.sin(endAngle);
+    const lg=slice>Math.PI?1:0;
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d",`M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2} L${ix2},${iy2} A${ri},${ri} 0 ${lg} 0 ${ix1},${iy1} Z`);
+    path.setAttribute("fill",DONUT_COLORS[i%DONUT_COLORS.length]);
+    const t=document.createElementNS("http://www.w3.org/2000/svg","title");
+    t.textContent=`${d.label}: ${d.count}`;
+    path.appendChild(t); svg.appendChild(path);
+    startAngle=endAngle;
+    // Legend
+    const li=document.createElement("div"); li.className="donut-legend-item";
+    li.innerHTML=`<div class="donut-dot" style="background:${DONUT_COLORS[i%DONUT_COLORS.length]}"></div><div class="donut-lbl">${d.label}</div><div class="donut-cnt">${d.count}</div>`;
+    legend.appendChild(li);
+  });
+}
+
+function updateStorageBadge(){
+  const kb=MetStorage.getStorageUsageKB();
+  document.getElementById("storageBadge").textContent=kb+" KB";
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTORY TAB
+// ═══════════════════════════════════════════════════════════
+let histFilter="all", histPage=0, HIST_PER_PAGE=20;
+
+document.querySelectorAll(".filter-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    histFilter=btn.dataset.filter;
+    histPage=0;
+    renderHistory();
+  });
+});
+
+document.getElementById("loadMoreBtn").addEventListener("click",()=>{
+  histPage++;
+  renderHistory(true);
+});
+
+function renderHistory(append=false){
+  let sessions=MetStorage.getHistory();
+  if(histFilter!=="all") sessions=sessions.filter(s=>s.app_mode===histFilter);
+  const total=sessions.length;
+  const slice=sessions.slice(0,(histPage+1)*HIST_PER_PAGE);
+  const list=document.getElementById("historyList");
+  if(!append) list.innerHTML="";
+  if(sessions.length===0 && !append){
+    list.innerHTML='<div class="history-empty">No sessions yet.<br>Complete a session to see your history here.</div>';
+    document.getElementById("loadMoreBtn").style.display="none";
+    return;
+  }
+  slice.slice(append ? histPage*HIST_PER_PAGE : 0).forEach(s=>{
+    const card=document.createElement("div"); card.className="session-card";
+    const isAthl=s.app_mode==="athletic";
+    const modeName=MODE_NAMES[s.sub_mode]||s.sub_mode;
+    const icon=isAthl?(MODE_ICONS[s.sub_mode]||"🏃"):(MUSIC_MODE_ICONS[s.sub_mode]||"🎵");
+    const dur=fmtHMS(s.total_duration_sec);
+    const steps=s.total_steps||s.total_beats||0;
+    const stepsLabel=isAthl?"steps":"beats";
+    card.innerHTML=`
+      <div class="session-hdr" onclick="toggleSessionCard(this)">
+        <div class="session-mode-badge">${icon}</div>
+        <div class="session-info">
+          <div class="session-name">${modeName}</div>
+          <div class="session-meta">${fmtDateTime(s.timestamp)} · ${isAthl?"Athletic":"Music"}</div>
+        </div>
+        <div class="session-stats">
+          <div class="session-dur">${dur}</div>
+          <div class="session-steps">${steps} ${stepsLabel}</div>
+        </div>
+        <div class="session-chev">▾</div>
+      </div>
+      <div class="session-body">
+        <div style="height:10px;"></div>
+        <div class="session-detail-row"><span class="sd-label">Duration</span><span class="sd-val">${dur}</span></div>
+        <div class="session-detail-row"><span class="sd-label">Active Time</span><span class="sd-val">${fmtMS(s.total_active_sec)}</span></div>
+        <div class="session-detail-row"><span class="sd-label">Rest Time</span><span class="sd-val">${fmtMS(s.total_rest_sec)}</span></div>
+        <div class="session-detail-row"><span class="sd-label">Start Cadence</span><span class="sd-val">${s.starting_cadence} ${isAthl?"SPM":"BPM"}</span></div>
+        <div class="session-detail-row"><span class="sd-label">End Cadence</span><span class="sd-val">${s.ending_cadence} ${isAthl?"SPM":"BPM"}</span></div>
+        <div class="session-detail-row"><span class="sd-label">Total ${isAthl?"Steps":"Beats"}</span><span class="sd-val">${steps}</span></div>
+        ${s.sets_completed>0?`<div class="session-detail-row"><span class="sd-label">Sets Completed</span><span class="sd-val">${s.sets_completed}</span></div>`:""}
+        ${s.sets_skipped>0?`<div class="session-detail-row"><span class="sd-label">Sets Skipped</span><span class="sd-val">${s.sets_skipped}</span></div>`:""}
+        ${s.flexible_mode_used?`<div class="session-detail-row"><span class="sd-label">Flexible Mode</span><span class="sd-val" style="color:var(--green);">ON</span></div>`:""}
+        ${renderSetsMini(s)}
+        <div style="margin-top:10px;">
+          <textarea class="session-note" placeholder="Add a note…" rows="2" data-sid="${s.session_id}">${s.user_notes||""}</textarea>
+          <button class="note-save-btn" onclick="saveNote('${s.session_id}',this)">SAVE NOTE</button>
+        </div>
+        <div style="margin-top:8px;text-align:right;">
+          <button class="session-delete-btn" onclick="deleteSession('${s.session_id}',this)">🗑 Delete Session</button>
+        </div>
+        <div style="clear:both;height:4px;"></div>
+      </div>`;
+    list.appendChild(card);
+  });
+  document.getElementById("loadMoreBtn").style.display=((histPage+1)*HIST_PER_PAGE<total)?"block":"none";
+}
+
+function renderSetsMini(s){
+  if(!s.sets_detail||!s.sets_detail.length) return "";
+  let html='<div class="session-sets-label">Set Breakdown</div>';
+  s.sets_detail.forEach(set=>{
+    const hasSub=(set.phases||[]).length>1;
+    html+=`<div class="set-mini">
+      <div class="set-mini-row"><span class="k">SET ${set.set_number||set.setNum}</span><span class="v">${set.planned_cadence||set.plannedCadence} SPM</span></div>
+      <div class="set-mini-row"><span class="k">Active</span><span class="v">${fmtMS(set.actual_active_sec||set.plannedDur||0)}</span></div>
+      <div class="set-mini-row"><span class="k">Rest</span><span class="v">${fmtMS(set.actual_rest_sec||set.plannedRest||0)}</span></div>
+      ${(set.rest_extensions||0)>0?`<div class="set-mini-row"><span class="k">Rest Extensions</span><span class="v">+${set.rest_extensions}×10s</span></div>`:""}
+      ${hasSub?`<div class="set-mini-row" style="margin-top:4px;"><span class="k" style="color:var(--green);font-size:7.5px;">Sub-phases: ${set.phases.length}</span><span class="v"></span></div>`:""}
+    </div>`;
+  });
+  return html;
+}
+
+function deleteSession(sid, btn){
+  if(!confirm("Delete this session? This cannot be undone.")) return;
+  MetStorage.deleteSession(sid);
+  // Remove card from DOM
+  const card = btn.closest(".session-card");
+  card.style.transition = "opacity 0.3s";
+  card.style.opacity = "0";
+  setTimeout(()=>{ card.remove(); renderHome(); }, 300);
+  showToast("Session deleted");
+}
+
+function toggleSessionCard(hdr){
+  const body=hdr.nextElementSibling;
+  const chev=hdr.querySelector(".session-chev");
+  body.classList.toggle("open");
+  chev.style.transform=body.classList.contains("open")?"rotate(180deg)":"";
+}
+
+function saveNote(sid,btn){
+  const ta=btn.previousElementSibling;
+  MetStorage.updateSessionNotes(sid, ta.value);
+  showToast("Note saved ✓");
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ACHIEVEMENTS TAB
+// ═══════════════════════════════════════════════════════════
+function renderAchievements(){
+  const all=MetStorage.getAchievements();
+  const prog=MetStorage.getAchievementProgress();
+  document.getElementById("achProgressFill").style.width=prog.percent+"%";
+  document.getElementById("achProgressLabel").textContent=`${prog.unlocked} / ${prog.total} unlocked (${prog.percent}%)`;
+  const grid=document.getElementById("achGrid");
+  grid.innerHTML="";
+  all.forEach(a=>{
+    const el=document.createElement("div");
+    el.className="ach-item"+(a.unlocked?" unlocked":"");
+    el.innerHTML=`
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+      ${a.unlocked?`<div class="ach-date">${fmtDate(a.unlocked_date)}</div>`:'<div class="ach-date" style="color:var(--text-faint);">Locked</div>'}
+      <div class="ach-tooltip">${a.desc}</div>`;
+    grid.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS TAB
+// ═══════════════════════════════════════════════════════════
+function loadSettings(){
+  const s=MetStorage.getSettings();
+  const uname=MetStorage.getUserName();
+  const defMode=MetStorage.getDefaultMode()||"";
+  document.getElementById("setUserName").value=uname;
+  document.getElementById("setDefaultMode").value=defMode;
+  document.getElementById("setAthCadence").value=s.default_cadence_athletic;
+  document.getElementById("setMusBpm").value=s.default_cadence_music;
+  document.getElementById("setInstrument").value=s.default_instrument;
+  document.getElementById("setVolume").value=Math.round(s.volume_level*100);
+  document.getElementById("toggleFlex").classList.toggle("on",s.flexible_mode_default);
+  document.getElementById("toggleVoice").classList.toggle("on",s.voice_announcements!==false);
+  // Storage bar
+  const kb=MetStorage.getStorageUsageKB();
+  const maxKB=5120;
+  document.getElementById("storageText").textContent=`${kb} KB / ~5 MB`;
+  document.getElementById("storageBarFill").style.width=Math.min(100,(kb/maxKB)*100)+"%";
+}
+
+// Auto-save settings on input change
+["setAthCadence","setMusBpm","setInstrument","setVolume","setDefaultMode"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("change",()=>saveSettings());
+});
+
+document.getElementById("toggleFlex").addEventListener("click",function(){
+  this.classList.toggle("on");
+  saveSettings();
+});
+document.getElementById("toggleVoice").addEventListener("click",function(){
+  this.classList.toggle("on");
+  saveSettings();
+});
+
+function saveSettings(){
+  const vol=parseInt(document.getElementById("setVolume").value)||70;
+  MetStorage.updateSettings({
+    default_cadence_athletic: parseInt(document.getElementById("setAthCadence").value)||140,
+    default_cadence_music:    parseInt(document.getElementById("setMusBpm").value)||120,
+    default_instrument:       document.getElementById("setInstrument").value,
+    volume_level:             vol/100,
+    flexible_mode_default:    document.getElementById("toggleFlex").classList.contains("on"),
+    voice_announcements:      document.getElementById("toggleVoice").classList.contains("on"),
+  });
+  const dm=document.getElementById("setDefaultMode").value;
+  MetStorage.setDefaultMode(dm||null);
+  showToast("Settings saved ✓");
+}
+
+document.getElementById("saveNameBtn").addEventListener("click",()=>{
+  const n=document.getElementById("setUserName").value.trim();
+  if(!n){showToast("Please enter a name");return;}
+  MetStorage.setUserName(n);
+  showToast("Name saved ✓");
+  renderHome(); // refresh greeting
+});
+
+// Export
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  MetStorage.exportData();
+  showToast("Backup exported ✓");
+});
+
+// Import
+document.getElementById("importBtn").addEventListener("click",()=>{
+  document.getElementById("importFile").click();
+});
+document.getElementById("importFile").addEventListener("change",async(e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const result=await MetStorage.importData(file);
+  showToast(result.message, 4000);
+  if(result.success){ renderHome(); loadSettings(); }
+  e.target.value="";
+});
+
+// Clear history
+document.getElementById("clearHistoryBtn").addEventListener("click",()=>{
+  if(!confirm("Clear all session history? Achievements and streaks will be kept.")) return;
+  MetStorage.clearHistory();
+  showToast("History cleared");
+  renderHistory();
+});
+
+// Factory reset
+document.getElementById("clearAllBtn").addEventListener("click",()=>{
+  if(!confirm("⚠ This will delete ALL your data including streaks and achievements. Are you sure?")) return;
+  if(!confirm("Last warning — this cannot be undone. Continue?")) return;
+  MetStorage.clearAll();
+  showToast("All data cleared. Starting fresh.");
+  renderHome(); loadSettings(); renderHistory(); renderAchievements();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+
+// Fix #3: Smart back button — reads ?from= URL param
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const from   = params.get("from");
+  const btn    = document.getElementById("navBackBtn");
+  if (!btn) return;
+  if (from === "athletic") {
+    btn.href  = "athleticMetronome.html";
+    btn.title = "Back to Athletic Metronome";
+  } else if (from === "music") {
+    btn.href  = "musicMetronome.html";
+    btn.title = "Back to Music Metronome";
+  } else {
+    btn.href  = "metronomeItem.html";
+    btn.title = "Back to Mode Selector";
+  }
+})();
+
+// Initial render after layout — double rAF ensures real offsetWidth for line chart
+requestAnimationFrame(()=>requestAnimationFrame(()=>{ renderHome(); }));
+
+// Fix #4: Replay tour buttons
+document.getElementById("replayTourAthBtn")?.addEventListener("click", () => {
+  window.location.href = "athleticMetronome.html?replayTour=1";
+});
+document.getElementById("replayTourMusBtn")?.addEventListener("click", () => {
+  window.location.href = "musicMetronome.html?replayTour=1";
+});
+
+// Re-render line chart on resize (e.g. phone rotation)
+window.addEventListener("resize", ()=>{
+  const homePanel = document.getElementById("tab-home");
+  if(homePanel && homePanel.classList.contains("active")){
+    requestAnimationFrame(()=>requestAnimationFrame(renderLineChart));
+  }
+});
+
+// Voice control deferred to Phase 2.
+</script>
+</body>
+</html>

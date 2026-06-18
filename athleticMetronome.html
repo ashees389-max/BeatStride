@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#030810">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>BeatStride — Athletic</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;width:100%;background:radial-gradient(circle at top,rgba(46,204,113,0.03),transparent 35%),linear-gradient(to bottom,#04140d,#000000 45%);font-family:Georgia,serif;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+body::before{content:"";position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.03),transparent 70%);top:-180px;right:-180px;pointer-events:none;animation:bgFloat 8s ease-in-out infinite;}
+@keyframes bgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(20px)}}
+/* Device */
+.device{position:relative;width:min(340px,100vw);height:min(700px,100svh);border-radius:34px;background:linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015));border:1px solid rgba(255,255,255,0.10);backdrop-filter:blur(14px);box-shadow:0 0 40px rgba(0,0,0,0.6),inset 0 0 25px rgba(255,255,255,0.03);display:flex;flex-direction:column;overflow:hidden;animation:deviceFloat 6s ease-in-out infinite;}
+@keyframes deviceFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.device::before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.04);top:-70px;left:-60px;pointer-events:none;z-index:0;}
+.device::after{content:"";position:absolute;width:120px;height:240px;background:rgba(255,255,255,0.04);transform:rotate(18deg);bottom:-80px;right:-20px;pointer-events:none;z-index:0;}
+/* Screens */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;border-radius:34px;overflow:hidden;transition:transform 0.38s cubic-bezier(0.4,0,0.2,1),opacity 0.38s ease;transform:translateX(100%);opacity:0;pointer-events:none;z-index:10;}
+.screen.active{transform:translateX(0);opacity:1;pointer-events:all;z-index:20;}
+.screen.slide-left{transform:translateX(-100%);opacity:0;pointer-events:none;z-index:10;}
+/* Screen scroll */
+.screen-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:20px 18px 12px;display:flex;flex-direction:column;gap:0;}
+.screen-scroll::-webkit-scrollbar{display:none;}
+/* Shared header */
+.screen-header{flex-shrink:0;display:flex;align-items:center;padding:18px 18px 12px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(2,12,7,0.6);backdrop-filter:blur(10px);}
+.back-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;cursor:pointer;flex-shrink:0;transition:background 0.2s;}
+@media(hover:hover){.back-btn:hover{background:rgba(255,255,255,0.12);}}
+.screen-title{font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.9);text-transform:uppercase;flex:1;}
+.screen-badge{font-size:8px;letter-spacing:1px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:3px 9px;color:rgba(255,255,255,0.8);white-space:nowrap;}
+/* Mode select screen */
+#screenMode{background:rgba(2,12,7,0.98);}
+.mode-list{display:flex;flex-direction:column;gap:8px;padding:4px 0;}
+.mode-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);cursor:pointer;transition:background 0.2s,border-color 0.2s;}
+.mode-item.selected{background:rgba(46,204,113,0.1);border-color:rgba(46,204,113,0.4);}
+@media(hover:hover){.mode-item:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.2);}}
+.mode-icon{font-size:20px;width:26px;text-align:center;flex-shrink:0;}
+.mode-info{flex:1;min-width:0;}
+.mode-name{font-size:11px;color:white;letter-spacing:0.5px;margin-bottom:3px;}
+.mode-item.selected .mode-name{color:#2ecc71;}
+.mode-desc{font-size:8px;color:rgba(255,255,255,0.4);letter-spacing:0.3px;line-height:1.4;}
+.mode-arrow{color:rgba(255,255,255,0.3);font-size:14px;flex-shrink:0;}
+/* Config screen */
+#screenConfig{background:rgba(2,12,7,0.98);}
+.cfg-section{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
+.cfg-section-label{font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.45);text-transform:uppercase;margin-bottom:10px;}
+.cfg-field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.cfg-field:last-child{margin-bottom:0;}
+.cfg-label{font-size:8px;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase;}
+.cfg-input{width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px 12px;color:white;font-size:13px;font-family:Georgia,serif;outline:none;transition:border-color 0.2s;}
+.cfg-input:focus{border-color:rgba(46,204,113,0.6);}
+.cfg-select{width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px 12px;color:white;font-size:12px;font-family:Georgia,serif;outline:none;cursor:pointer;transition:border-color 0.2s;}
+.cfg-select:focus{border-color:rgba(46,204,113,0.6);}
+.cfg-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cfg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.sets-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.set-row{display:flex;align-items:flex-start;gap:5px;background:rgba(0,0,0,0.3);border-radius:10px;padding:10px 10px;border:1px solid rgba(255,255,255,0.07);}
+.set-row-num{font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;min-width:34px;flex-shrink:0;}
+.set-row input{flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 6px;color:white;font-size:12px;font-family:Georgia,serif;outline:none;text-align:center;min-width:0;}
+.set-row input:focus{border-color:rgba(46,204,113,0.4);}
+/* Segmented time picker */
+.time-seg{display:flex;align-items:center;gap:0;width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;overflow:hidden;}
+.time-seg:focus-within{border-color:rgba(46,204,113,0.4);}
+.time-seg-inp{width:100%;flex:1;background:transparent;border:none;color:white;font-size:13px;font-family:Georgia,serif;outline:none;text-align:center;padding:8px 2px;-webkit-appearance:none;appearance:none;min-width:0;}
+.time-seg-inp:focus{background:rgba(46,204,113,0.12);color:#2ecc71;}
+.time-seg-sep{color:rgba(255,255,255,0.35);font-size:11px;flex-shrink:0;padding:0 1px;user-select:none;}
+/* Standalone time picker for fixed interval */
+.time-picker-wrap{display:flex;align-items:center;gap:0;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;overflow:hidden;width:100%;}
+.time-picker-wrap:focus-within{border-color:rgba(46,204,113,0.4);}
+.tp-inp{flex:1;background:transparent;border:none;color:white;font-size:14px;font-family:Georgia,serif;outline:none;text-align:center;padding:10px 0;-webkit-appearance:none;appearance:none;}
+.tp-inp:focus{background:rgba(46,204,113,0.10);color:#2ecc71;}
+.tp-sep{color:rgba(255,255,255,0.35);font-size:14px;flex-shrink:0;user-select:none;}
+.tp-label{font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:1px;text-align:center;margin-top:3px;}
+.set-row-del{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:rgba(255,80,80,0.12);border:1px solid rgba(255,80,80,0.25);display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.8);cursor:pointer;transition:background 0.2s;font-size:13px;}
+@media(hover:hover){.set-row-del:hover{background:rgba(255,80,80,0.25);}}
+.add-set-btn{width:100%;padding:9px;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.18);border-radius:10px;color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:1px;cursor:pointer;transition:background 0.2s;font-family:Georgia,serif;}
+@media(hover:hover){.add-set-btn:hover{background:rgba(255,255,255,0.08);}}
+.flex-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border-radius:10px;border:1px solid rgba(255,255,255,0.07);cursor:pointer;margin-top:4px;}
+.flex-row input[type=checkbox]{accent-color:#2ecc71;width:14px;height:14px;cursor:pointer;}
+.flex-row label{font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;cursor:pointer;line-height:1.4;}
+.cfg-footer{flex-shrink:0;padding:12px 18px 16px;display:flex;flex-direction:column;gap:8px;background:rgba(2,12,7,0.8);border-top:1px solid rgba(255,255,255,0.06);}
+.proceed-btn{width:100%;padding:14px;background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.4);border-radius:14px;color:#2ecc71;font-size:12px;letter-spacing:2px;font-family:Georgia,serif;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;text-transform:uppercase;}
+@media(hover:hover){.proceed-btn:hover{background:rgba(46,204,113,0.25);box-shadow:0 0 18px rgba(46,204,113,0.2);}}
+.cancel-cfg-btn{width:100%;padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:1.5px;font-family:Georgia,serif;cursor:pointer;transition:background 0.2s;text-transform:uppercase;}
+@media(hover:hover){.cancel-cfg-btn:hover{background:rgba(255,255,255,0.08);}}
+/* Main screen */
+#screenMain{background:transparent;}
+.main-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:10px 16px 14px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;}
+.main-scroll::-webkit-scrollbar{display:none;}
+/* Top bar of main */
+.main-topbar{width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.main-mode-label{font-size:8.5px;letter-spacing:1.5px;color:rgba(255,255,255,0.45);text-transform:uppercase;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.main-mode-label span{color:#2ecc71;}
+.top-nav-icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.55);transition:background 0.2s,color 0.2s;text-decoration:none;}
+@media(hover:hover){.top-nav-icon:hover{background:rgba(255,255,255,0.1);color:white;border-color:rgba(255,255,255,0.25);}}
+.change-mode-btn{flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:5px 11px;color:rgba(255,255,255,0.65);font-size:8px;letter-spacing:1px;cursor:pointer;white-space:nowrap;font-family:Georgia,serif;transition:background 0.2s;}
+@media(hover:hover){.change-mode-btn:hover{background:rgba(255,255,255,0.12);}}
+/* Top pills */
+.top-pills{width:100%;display:flex;gap:6px;}
+.top-pill{flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:6px 8px;text-align:center;}
+.pill-label{font-size:7px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;}
+.pill-val{font-size:12px;color:white;font-family:monospace;letter-spacing:1px;margin-top:1px;}
+/* Gauge */
+.gauge-wrap{width:100%;display:flex;justify-content:center;}
+/* Info strip */
+.info-strip{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:3px;min-height:56px;}
+.info-line{font-size:10px;color:white;text-align:center;letter-spacing:0.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;}
+.info-l1{font-size:11px;color:#2ecc71;font-weight:bold;}
+.info-l2{font-size:10px;color:rgba(255,255,255,0.8);}
+.info-l3{font-size:9px;color:rgba(255,255,255,0.45);}
+/* Lower controls */
+.lower-row{width:100%;display:flex;justify-content:space-between;align-items:center;}
+.side-svg rect,.side-svg path{transition:fill 0.18s;cursor:pointer;}
+@media(hover:hover){.side-svg rect:hover,.side-svg path:hover{fill:rgba(255,255,255,0.15)!important;}}
+.center-area{position:relative;width:94px;height:96px;display:flex;justify-content:center;align-items:center;flex-shrink:0;}
+.start-svg{cursor:pointer;animation:startPulse 2s ease-in-out infinite;}
+@keyframes startPulse{0%,100%{filter:drop-shadow(0 0 5px rgba(255,255,255,0.35));}50%{filter:drop-shadow(0 0 14px rgba(255,255,255,0.75));}}
+
+/* ── Tap-to-edit cadence overlay ── */
+.cadence-edit-wrap{
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-68%);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  z-index:50;
+  pointer-events:all;
+}
+.cadence-edit-wrap.show{ display:flex; }
+.cadence-input{
+  width:90px;
+  background:rgba(0,0,0,0.9);
+  border:1px solid rgba(46,204,113,0.5);
+  border-radius:10px;
+  color:white;
+  font-size:2.2rem;
+  font-weight:bold;
+  font-family:Georgia,serif;
+  text-align:center;
+  padding:4px 0;
+  outline:none;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.cadence-edit-hint{
+  font-size:0.58rem;
+  color:rgba(255,255,255,0.35);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  font-family:'Segoe UI',sans-serif;
+}
+#gText{ cursor:pointer; }
+#gText:active{ opacity:0.6; }
+.ctrl-panel{display:none;gap:8px;align-items:center;}
+.ctrl-btn{width:42px;height:78px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;display:flex;justify-content:center;align-items:center;cursor:pointer;transition:0.25s;font-size:14px;}
+@media(hover:hover){.ctrl-btn:hover{background:rgba(255,255,255,0.12);transform:translateY(-2px);}}
+.ctrl-pause{border-radius:50px 0 0 50px;}
+.ctrl-stop{border-radius:0 50px 50px 0;}
+.rest-wrap{display:none;position:relative;width:92px;height:92px;justify-content:center;align-items:center;}
+.rest-ring-svg{position:absolute;top:0;left:0;transform:rotate(-90deg);pointer-events:none;}
+.rest-track{fill:none;stroke:rgba(255,255,255,0.1);stroke-width:4;}
+.rest-progress{fill:none;stroke:rgba(46,204,113,0.85);stroke-width:4;stroke-linecap:round;stroke-dasharray:251.2;stroke-dashoffset:251.2;transition:stroke-dashoffset 0.9s linear;}
+.rest-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1px;}
+.rest-lbl{font-size:11px;color:#2ecc71;letter-spacing:1.5px;font-weight:bold;}
+.rest-cnt{font-size:18px;color:white;font-family:monospace;font-weight:bold;}
+.rest-plus{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);border-radius:10px;padding:3px 9px;color:#2ecc71;font-size:7px;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;font-family:Georgia,serif;transition:background 0.2s;}
+@media(hover:hover){.rest-plus:hover{background:rgba(46,204,113,0.22);}}
+/* Bottom buttons */
+.bottom-row{width:100%;display:flex;gap:8px;}
+.bot-btn{flex:1;padding:14px 0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-size:11px;letter-spacing:1.5px;cursor:pointer;font-family:Georgia,serif;text-align:center;transition:background 0.2s;}
+@media(hover:hover){.bot-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);}}
+.bot-btn:active{background:rgba(46,204,113,0.22);}
+/* Wave */
+
+/* Summary overlay */
+#screenSummary{background:rgba(2,10,6,0.98);}
+.sum-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:16px 18px;}
+.sum-scroll::-webkit-scrollbar{display:none;}
+.sum-mode-tag{font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-align:center;margin-bottom:12px;}
+.sum-totals{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.sum-row:last-child{border:none;}
+.sl{font-size:8.5px;color:rgba(255,255,255,0.45);}
+.sv{font-size:9px;color:white;font-family:monospace;}
+.sv.g{color:#2ecc71;}
+.sum-sets-label{font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;}
+.sum-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:7px;overflow:hidden;}
+.sum-card-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;transition:background 0.2s;}
+@media(hover:hover){.sum-card-hdr:hover{background:rgba(255,255,255,0.04);}}
+.sum-card-name{font-size:10px;color:#2ecc71;letter-spacing:0.5px;}
+.sum-card-meta{font-size:8.5px;color:rgba(255,255,255,0.4);}
+.sum-chev{font-size:11px;color:rgba(255,255,255,0.3);transition:transform 0.2s;}
+.sum-card-body{display:none;padding:0 14px 10px;border-top:1px solid rgba(255,255,255,0.06);}
+.sum-card-body.open{display:block;}
+.sub-ph-lbl{font-size:7.5px;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;}
+.sub-ph{background:rgba(255,255,255,0.03);border-left:2px solid rgba(255,255,255,0.15);border-radius:0 6px 6px 0;padding:5px 10px;margin:3px 0;}
+/* Achievement toast */
+.ach-toast{position:absolute;bottom:64px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(2,20,10,0.96);border:1px solid rgba(46,204,113,0.45);border-radius:14px;padding:10px 16px;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:opacity 0.35s,transform 0.35s;z-index:300;white-space:nowrap;box-shadow:0 4px 24px rgba(46,204,113,0.15);}
+.ach-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.ach-toast-icon{font-size:20px;}
+.ach-toast-text{display:flex;flex-direction:column;gap:2px;}
+.ach-toast-label{font-size:7.5px;letter-spacing:1.5px;color:#2ecc71;text-transform:uppercase;}
+.ach-toast-name{font-size:11px;color:white;font-weight:bold;}
+/* Storage warning */
+.storage-warn{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(255,80,80,0.9);border-radius:10px;padding:6px 14px;font-size:10px;color:white;z-index:400;display:none;white-space:nowrap;}
+.storage-warn.show{display:block;}
+
+/* Diary nudge */
+.diary-nudge{position:absolute;bottom:72px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(2,20,10,0.96);border:1px solid rgba(46,204,113,0.3);border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:350;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,0.5);}
+.diary-nudge.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:all;}
+.nudge-text{font-size:0.75rem;color:rgba(255,255,255,0.85);}
+.nudge-yes{background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.35);border-radius:10px;padding:5px 11px;color:#2ecc71;font-size:0.7rem;cursor:pointer;font-weight:600;transition:background 0.2s;white-space:nowrap;}
+@media(hover:hover){.nudge-yes:hover{background:rgba(46,204,113,0.28);}}
+.nudge-no{background:none;border:none;color:rgba(255,255,255,0.3);font-size:0.7rem;cursor:pointer;padding:5px 6px;white-space:nowrap;}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+═══════════════════════════════════════ */
+
+/* 1. Very narrow — Galaxy Z Fold5 (≤350px) */
+@media(max-width:350px){
+  .device{width:100vw;height:100svh;border-radius:0;}
+  .main-topbar{gap:3px;}
+  .top-nav-icon{width:26px;height:26px;font-size:11px;}
+  .change-mode-btn{font-size:7px;padding:4px 8px;}
+  .pill-val{font-size:10px;}
+  .screen-scroll{padding:14px 12px 10px;}
+  .cfg-footer{padding-left:12px;padding-right:12px;}
+}
+
+/* 2. Short height — iPhone SE (≤680px) + Nest Hub landscape */
+@media(max-height:680px){
+  .device{height:100svh;border-radius:0;}
+  .main-scroll{justify-content:space-evenly;padding:6px 16px 8px;}
+  .main-scroll{padding-top:8px;padding-bottom:4px;}
+  .gauge-wrap svg{width:180px;height:auto;}
+  .top-pill{padding:4px 6px;}
+  .pill-label{font-size:6px;}
+  .pill-val{font-size:10px;}
+  .info-strip{padding:6px 12px;min-height:44px;gap:1px;}
+  .info-l1{font-size:10px;}
+  .info-l2{font-size:9px;}
+  .info-l3{font-size:8px;}
+  .center-area{width:82px;height:82px;}
+  .ctrl-btn{height:66px;}
+  .bot-btn{padding:8px 0;}
+  .main-topbar{margin-bottom:4px;}
+  .top-pills{margin-bottom:4px;}
+}
+
+/* 3. Large tablet portrait — Surface Pro 7 (912×1368), Zenbook (853×1280) */
+@media(min-width:768px) and (min-height:900px){
+  html,body{align-items:flex-start;padding-top:40px;}
+  .device{
+    width:min(500px,88vw);
+    height:min(860px,90svh);
+    border-radius:36px;
+  }
+  .pill-val{font-size:15px;}
+  .gauge-wrap svg{width:240px;}
+  .info-l1{font-size:13px;}
+  .info-l2{font-size:11px;}
+  .center-area{width:108px;height:108px;}
+  .bot-btn{font-size:13px;padding:14px 0;}
+}
+
+/* 4. Nest Hub landscape — wide+short (≥768px, ≤680px) */
+@media(min-width:768px) and (max-height:680px){
+  html,body{align-items:center;}
+  .device{
+    width:min(420px,88vw);
+    height:min(580px,95svh);
+    border-radius:24px;
+  }
+  .gauge-wrap svg{width:160px;}
+  .main-scroll{padding:6px 12px 4px;}
+  .center-area{width:78px;height:78px;}
+  .bot-btn{padding:7px 0;font-size:10px;}
+}
+</style>
+</head>
+<body>
+<script src="storage.js"></script>
+<script src="metronome-engine.js"></script>
+<script src="onboarding.js"></script>
+
+<div class="device">
+
+  <!-- Achievement toast -->
+  <div class="ach-toast" id="achToast">
+    <div class="ach-toast-icon" id="achToastIcon">🏆</div>
+    <div class="ach-toast-text">
+      <div class="ach-toast-label">Achievement Unlocked!</div>
+      <div class="ach-toast-name" id="achToastName"></div>
+    </div>
+  </div>
+  <div class="storage-warn" id="storageWarn">⚠ Storage full — export backup in Dashboard</div>
+
+  <!-- Diary nudge -->
+  <div class="diary-nudge" id="diaryNudge">
+    <span class="nudge-text">📖 Record this in your Diary?</span>
+    <div class="nudge-yes" id="nudgeYes">Yes →</div>
+    <div class="nudge-no" id="nudgeNo">Skip</div>
+  </div>
+
+  <!-- SCREEN 1: MODE SELECT -->
+  <div class="screen" id="screenMode">
+    <div class="screen-header">
+      <div class="back-btn" id="modeBackBtn">←</div>
+      <div class="screen-title">Select Mode</div>
+    </div>
+    <div class="screen-scroll">
+      <div class="mode-list" id="modeList"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: CONFIG -->
+  <div class="screen" id="screenConfig">
+    <div class="screen-header">
+      <div class="back-btn" id="cfgBackBtn">←</div>
+      <div class="screen-title" id="cfgTitle">Configure</div>
+      <div class="screen-badge" id="cfgBadge">REGULAR</div>
+    </div>
+    <div class="screen-scroll" id="cfgBody"></div>
+    <div class="cfg-footer">
+      <button class="proceed-btn" id="proceedBtn">PROCEED TO METRONOME →</button>
+      <button class="cancel-cfg-btn" id="cancelCfgBtn">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: MAIN -->
+  <div class="screen active" id="screenMain">
+    <div class="main-scroll">
+      <!-- Top bar -->
+      <div class="main-topbar">
+        <div class="top-nav-icon" title="Back" id="backHomeBtn" onclick="navGuard('metronomeItem.html')">←</div>
+        <div class="main-mode-label">MODE: <span id="mainModeLabel">REGULAR</span></div>
+        <div class="top-nav-icon" title="My Progress" id="dashIconBtn" onclick="navGuard('dashboard.html?from=athletic')">📊</div>
+        <button class="change-mode-btn" id="changeModeBtn">⚙ CHANGE MODE</button>
+      </div>
+      <!-- Duration + Steps -->
+      <div class="top-pills">
+        <div class="top-pill"><div class="pill-label">Duration</div><div class="pill-val" id="durVal">00:00:00</div></div>
+        <div class="top-pill"><div class="pill-label">Steps</div><div class="pill-val" id="stepsVal">0</div></div>
+      </div>
+      <!-- Gauge SVG -->
+      <div class="gauge-wrap" style="position:relative;">
+        <svg id="gaugeSvg" width="220" height="148" viewBox="0 0 220 148">
+          <defs>
+            <filter id="ng"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M28 118 A82 82 0 0 1 192 118" fill="none" stroke="rgba(46,204,113,0.12)" stroke-width="10" stroke-linecap="round"/>
+          <path id="gFill" d="M28 118 A82 82 0 0 1 192 118" fill="none" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-dasharray="257" stroke-dashoffset="257"/>
+          <g id="gTicks" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"></g>
+          <circle id="gNeedle" cx="110" cy="118" r="5" fill="#2ecc71" filter="url(#ng)" opacity="0"/>
+          <text x="20" y="132" fill="rgba(255,255,255,0.3)" font-size="7" font-family="Georgia,serif">40</text>
+          <text x="194" y="132" fill="rgba(255,255,255,0.3)" font-size="7" text-anchor="end" font-family="Georgia,serif">420</text>
+          <text id="gText" x="110" y="100" text-anchor="middle" fill="white" font-size="38" font-weight="bold" font-family="Georgia,serif">140</text>
+          <text x="110" y="118" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-size="9" letter-spacing="2" font-family="Georgia,serif">STEPS / MIN</text>
+        </svg>
+        <!-- Tap-to-edit overlay — appears over the gauge number on tap -->
+        <div class="cadence-edit-wrap" id="cadenceEditWrap">
+          <input class="cadence-input" id="cadenceInput" type="number"
+            min="40" max="420" inputmode="numeric" pattern="[0-9]*"/>
+          <span class="cadence-edit-hint">40 – 420 · tap ✓ to confirm</span>
+        </div>
+      </div>
+      <!-- Info strip -->
+      <div class="info-strip">
+        <div class="info-line info-l1" id="iL1">REGULAR METRONOME</div>
+        <div class="info-line info-l2" id="iL2">CADENCE: 140 SPM</div>
+        <div class="info-line info-l3" id="iL3">FREE RUN — NO SET LIMIT</div>
+      </div>
+      <!-- Controls -->
+      <div class="lower-row">
+        <div>
+          <svg width="86" height="112" class="side-svg">
+            <rect id="bM1" x="6" y="6" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="33" y="23" fill="white" font-size="13" text-anchor="middle" pointer-events="none">-1</text>
+            <rect id="bM5" x="6" y="42" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="33" y="59" fill="white" font-size="13" text-anchor="middle" pointer-events="none">-5</text>
+            <rect id="bHalf" x="6" y="78" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="33" y="95" fill="white" font-size="12" text-anchor="middle" pointer-events="none">½×</text>
+          </svg>
+        </div>
+        <div class="center-area">
+          <svg width="90" height="90" class="start-svg" id="startBtn">
+            <defs><filter id="gs"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <circle cx="45" cy="45" r="31" fill="black" stroke="white" stroke-width="2" filter="url(#gs)"/>
+            <text x="45" y="50" text-anchor="middle" fill="white" font-size="14" font-family="Georgia,serif">START</text>
+          </svg>
+          <div class="ctrl-panel" id="ctrlPanel">
+            <div class="ctrl-btn ctrl-pause" id="pauseBtn">❚❚</div>
+            <div class="ctrl-btn ctrl-stop" id="stopBtn">■</div>
+          </div>
+          <div class="rest-wrap" id="restWrap">
+            <svg width="92" height="92" class="rest-ring-svg">
+              <circle cx="46" cy="46" r="40" class="rest-track"/>
+              <circle cx="46" cy="46" r="40" class="rest-progress" id="restRing"/>
+            </svg>
+            <div class="rest-inner">
+              <span class="rest-lbl">REST</span>
+              <span class="rest-cnt" id="restCnt">30</span>
+            </div>
+            <div class="rest-plus" id="restPlus">+10 SEC</div>
+          </div>
+        </div>
+        <div>
+          <svg width="86" height="112" class="side-svg">
+            <rect id="bP1" x="26" y="6" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="53" y="23" fill="white" font-size="13" text-anchor="middle" pointer-events="none">+1</text>
+            <rect id="bP5" x="26" y="42" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="53" y="59" fill="white" font-size="13" text-anchor="middle" pointer-events="none">+5</text>
+            <rect id="bDbl" x="26" y="78" width="54" height="25" rx="7" fill="rgba(255,255,255,0.08)"/>
+            <text x="53" y="95" fill="white" font-size="12" text-anchor="middle" pointer-events="none">2×</text>
+          </svg>
+        </div>
+      </div>
+      <!-- Bottom buttons -->
+      <div class="bottom-row">
+        <button class="bot-btn" id="skipBtn">SKIP SET</button>
+        <button class="bot-btn" id="summaryBtn">SUMMARY</button>
+      </div>
+    </div><!-- /main-scroll -->
+
+  </div><!-- /screenMain -->
+
+  <!-- SCREEN 4: SUMMARY -->
+  <div class="screen" id="screenSummary">
+    <div class="screen-header">
+      <div class="back-btn" id="sumBackBtn">←</div>
+      <div class="screen-title">Session Summary</div>
+    </div>
+    <div class="sum-scroll">
+      <div class="sum-mode-tag" id="sumModeTag"></div>
+      <div class="sum-totals" id="sumTotals"></div>
+      <div class="sum-sets-label">Set Breakdown</div>
+      <div id="sumSetsList"></div>
+    </div>
+  </div>
+
+</div><!-- /device -->
+
+<script>
+const MODES=[
+  {id:"regular",     icon:"🏃",name:"Regular Metronome",      desc:"Free run at steady cadence. No set limit."},
+  {id:"timedRun",    icon:"⏱", name:"Timed Run",              desc:"Set a target duration & cadence. Auto-stops at end."},
+  {id:"fixedInterval",icon:"🔁",name:"Fixed Interval",         desc:"Same duration & rest for all sets. Uniform or per-set cadence."},
+  {id:"customSemi",  icon:"🎛", name:"Custom Interval — Semi", desc:"Variable cadence & duration per set. Fixed rest for all."},
+  {id:"customFull",  icon:"⚡", name:"Custom Interval — Full", desc:"Fully variable: cadence, duration & rest per set."},
+  {id:"cadenceRamp", icon:"📈", name:"Cadence Ramp",           desc:"Auto-increases cadence from start to end at set intervals."},
+];
+
+
+
+
+
+
+let currentMode="regular",cadence=140,flexMode=false,isRunning=false,isPaused=false,isResting=false;
+let totalSteps=0,_totalStepsOffset=0,sessionSec=0,setElapsed=0,setStartTime=0;
+let plannedSets=[],currentSetIdx=0,sessionData={mode:"regular",sets:[]},currentSetData=null,currentPhase=null;
+let sessionClockID=null,setDurTimerID=null,restIntervalID=null,rampIntervalID=null;
+let restRemaining=0,restTotal=0;
+let sessionStartBPM=140,setsSkippedCount=0,storedConfig={};
+
+const $=id=>document.getElementById(id);
+// Parse duration — accepts:
+//   plain seconds:  15       → 15s  (quick sprint)
+//   mm:ss:         0:15      → 15s
+//   hh:mm:ss:      00:45:00  → 2700s (45 min run)
+//   hh:mm:ss:      01:30:00  → 5400s (90 min session)
+function parseDur(val){
+  if(!val) return 0;
+  val=String(val).trim();
+  if(!val.includes(":")){return Math.max(0,parseInt(val)||0);}
+  const parts=val.split(":").map(v=>parseInt(v)||0);
+  if(parts.length===2) return parts[0]*60+parts[1];
+  if(parts.length===3) return parts[0]*3600+parts[1]*60+parts[2];
+  return 0;
+}
+
+function fmtHMS(s){const h=~~(s/3600),m=~~((s%3600)/60),ss=~~(s%60);return`${ph(h)}:${ph(m)}:${ph(ss)}`;}
+function fmtMS(s){return`${ph(~~(s/60))}:${ph(~~(s%60))}`;}
+function ph(n){return String(n).padStart(2,"0");}
+function clamp(v,lo,hi){return Math.min(hi,Math.max(lo,Math.round(v)));}
+function showCenter(w){$("startBtn").style.display=w==="start"?"block":"none";$("ctrlPanel").style.display=w==="controls"?"flex":"none";$("restWrap").style.display=w==="rest"?"flex":"none";}
+
+const ARC_LEN=Math.PI*82,CX=110,CY=118,R=82;
+function cadPct(c){return Math.min(1,Math.max(0,(c-40)/(420-40)));}
+function updateGauge(c){
+  $("gText").textContent=c;
+  const p=cadPct(c);
+  $("gFill").setAttribute("stroke-dasharray",ARC_LEN.toFixed(1));
+  $("gFill").setAttribute("stroke-dashoffset",(ARC_LEN*(1-p)).toFixed(1));
+  const a=(180-p*180)*Math.PI/180;
+  $("gNeedle").setAttribute("cx",(CX+R*Math.cos(a)).toFixed(1));
+  $("gNeedle").setAttribute("cy",(CY-R*Math.sin(a)).toFixed(1));
+  $("gNeedle").setAttribute("opacity","1");
+}
+(()=>{const g=$("gTicks");[40,80,120,160,200,240,280,320,360,400,420].forEach(tc=>{const p=(tc-40)/(420-40),a=(180-p*180)*Math.PI/180;const l=document.createElementNS("http://www.w3.org/2000/svg","line");l.setAttribute("x1",(CX+75*Math.cos(a)).toFixed(1));l.setAttribute("y1",(CY-75*Math.sin(a)).toFixed(1));l.setAttribute("x2",(CX+82*Math.cos(a)).toFixed(1));l.setAttribute("y2",(CY-82*Math.sin(a)).toFixed(1));g.appendChild(l);});})();
+
+function registerEngineCallbacks(){
+  MetEngine.clearCallbacks();
+  MetEngine.onBeat(()=>{
+    if(!isRunning||isResting||isPaused) return;
+    totalSteps=_totalStepsOffset+MetEngine.getScheduledBeats();
+    $("stepsVal").textContent=totalSteps;
+    if(currentPhase) currentPhase.steps=MetEngine.getScheduledBeats()-currentPhase._startBeat;
+  });
+}
+
+function updateInfo(){
+  const m=currentMode;
+  $("skipBtn").textContent=(m==="regular"||m==="cadenceRamp")?"END SESSION":"SKIP SET";
+  if(m==="regular"){$("iL1").textContent="REGULAR METRONOME";$("iL2").textContent="CADENCE: "+cadence+" SPM";$("iL3").textContent="FREE RUN — NO SET LIMIT";return;}
+  if(m==="cadenceRamp"){const cfg=storedConfig;const dir=cfg.startCadence<=cfg.endCadence?"+":"-";$("iL1").textContent="CADENCE RAMP";$("iL2").textContent=cadence+" → "+cfg.endCadence+" SPM";$("iL3").textContent=dir+cfg.step+" SPM every "+cfg.stepDur+"s";return;}
+  if(!isRunning){$("iL1").textContent=MODES.find(x=>x.id===m).name.toUpperCase();$("iL2").textContent="CONFIGURED · READY";$("iL3").textContent="PRESS START";return;}
+  const s=plannedSets[currentSetIdx];if(!s) return;
+  if(isResting){$("iL1").textContent="SET "+(currentSetIdx+1)+" | REST PHASE";$("iL2").textContent="NEXT: "+(plannedSets[currentSetIdx+1]?.cadence||s.cadence)+" SPM";$("iL3").textContent="REST: "+fmtHMS(s.rest);}
+  else{$("iL1").textContent="SET "+(currentSetIdx+1)+"/"+plannedSets.length+" | ACTIVE";$("iL2").textContent="CADENCE: "+cadence+" SPM";$("iL3").textContent="DUR: "+fmtHMS(s.duration)+"  REST: "+fmtHMS(s.rest);}
+}
+
+function startClock(){sessionClockID=setInterval(()=>{if(!isPaused){sessionSec++;$("durVal").textContent=fmtHMS(sessionSec);}},1000);}
+function stopClock(){clearInterval(sessionClockID);}
+
+// Track ramp phases for summary
+let rampPhases=[];
+let rampPhaseStart=0;
+
+function startRamp(){
+  const cfg=storedConfig;
+  cadence=cfg.startCadence;
+  rampPhases=[];
+  rampPhaseStart=0;
+  updateGauge(cadence);updateInfo();MetEngine.setBPM(cadence);
+
+  // Determine direction
+  const goingUp   = cfg.startCadence < cfg.endCadence;
+  const goingDown = cfg.startCadence > cfg.endCadence;
+
+  // Record first phase start time
+  rampPhaseStart=sessionSec;
+
+  rampIntervalID=setInterval(()=>{
+    if(isPaused) return;
+
+    // Duration this phase actually ran (wall clock seconds)
+    const phaseDur = sessionSec - rampPhaseStart;
+
+    // Calculate steps mathematically — immune to audio buffer drift
+    // steps = cadence (beats/min) × duration (sec) / 60
+    const phaseSteps = Math.round(cadence * phaseDur / 60);
+
+    // Check if we've reached the end
+    const reachedEnd = goingUp
+      ? cadence >= cfg.endCadence
+      : goingDown
+        ? cadence <= cfg.endCadence
+        : true;
+
+    // Record this phase
+    rampPhases.push({
+      cadence:     cadence,
+      durationSec: phaseDur,
+      steps:       phaseSteps
+    });
+
+    if(reachedEnd){
+      clearInterval(rampIntervalID);
+      return;
+    }
+
+    // Move cadence in correct direction
+    if(goingUp){
+      cadence = clamp(cadence + cfg.step, 40, 420);
+    } else {
+      cadence = clamp(cadence - cfg.step, 40, 420);
+    }
+    // Start new phase
+    rampPhaseStart = sessionSec;
+
+    updateGauge(cadence);updateInfo();MetEngine.setBPM(cadence);
+  }, cfg.stepDur*1000);
+}
+function stopRamp(){clearInterval(rampIntervalID);}
+
+function openPhase(c){currentPhase={cadence:c,startSec:sessionSec,steps:0,_startBeat:MetEngine.getScheduledBeats()};}
+function closePhase(){
+  if(!currentPhase)return;
+  currentPhase.endSec=sessionSec;currentPhase.durationSec=currentPhase.endSec-currentPhase.startSec;
+  currentPhase.steps=Math.max(0,MetEngine.getScheduledBeats()-currentPhase._startBeat);
+  if(currentSetData)currentSetData.phases.push({...currentPhase});currentPhase=null;
+}
+function finaliseSet(){if(currentSetData){sessionData.sets.push({...currentSetData,phases:[...currentSetData.phases]});currentSetData=null;}}
+
+function beginSet(idx){
+  if(idx>=plannedSets.length){endSession();return;}
+  currentSetIdx=idx;const s=plannedSets[idx];
+  cadence=s.cadence;setElapsed=0;setStartTime=performance.now();
+  updateGauge(cadence);isResting=false;
+  MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);
+  currentSetData={setNum:idx+1,plannedCadence:s.cadence,plannedDur:s.duration,plannedRest:s.rest,actualActive:0,actualRest:0,restExtensions:0,phases:[]};
+  openPhase(cadence);updateInfo();clearTimeout(setDurTimerID);
+  if(s.duration>0){MetEngine.startTimed(s.duration,()=>{if(!isRunning||isPaused||isResting)return;onActiveEnd(idx);});}
+  else{MetEngine.start();}
+}
+
+function onActiveEnd(idx){
+  closePhase();
+  const setBeats=MetEngine.getScheduledBeats();_totalStepsOffset+=setBeats;totalSteps=_totalStepsOffset;$("stepsVal").textContent=totalSteps;
+  if(currentSetData)currentSetData.actualActive=Math.round((performance.now()-setStartTime)/1000);
+  MetEngine.stop();const s=plannedSets[idx];
+  if(s.rest>0)beginRest(s.rest,idx);else{finaliseSet();beginSet(idx+1);}
+}
+
+function beginRest(sec,setIdx){
+  isResting=true;restRemaining=sec;restTotal=sec;showCenter("rest");
+  $("restCnt").textContent=sec;$("restRing").style.strokeDashoffset="251.2";updateInfo();
+  restIntervalID=setInterval(()=>{
+    if(isPaused)return;restRemaining--;$("restCnt").textContent=restRemaining;
+    $("restRing").style.strokeDashoffset=(251.2*(restRemaining/restTotal)).toFixed(1);
+    if(restRemaining<=0){clearInterval(restIntervalID);onRestEnd(setIdx);}
+  },1000);
+}
+function onRestEnd(setIdx){if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);}
+
+// ── Diary nudge ──────────────────────────────────────────────
+let _athleticSessionData = null;
+function showDiaryNudge(){
+  if(sessionSec < 3) return;
+  _athleticSessionData = {
+    duration: sessionSec,
+    beats: totalSteps,
+    bpm: cadence,
+    mode: "athletic",
+    ts: Date.now()
+  };
+  const nudge=$("diaryNudge");
+  nudge.classList.add("show");
+  setTimeout(()=>nudge.classList.remove("show"), 4000);
+}
+$("nudgeYes").addEventListener("click",()=>{
+  $("diaryNudge").classList.remove("show");
+  const encoded=encodeURIComponent(JSON.stringify(_athleticSessionData));
+  window.location.href="dashboard.html?diary=1&session="+encoded;
+});
+$("nudgeNo").addEventListener("click",()=>$("diaryNudge").classList.remove("show"));
+
+function endSession(){
+  finaliseSet();MetEngine.stop();stopRamp();stopClock();
+  clearTimeout(setDurTimerID);clearInterval(restIntervalID);
+  isRunning=false;isPaused=false;isResting=false;
+  _saveAthlSession(false);
+  showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
+  if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
+  openSummary();
+}
+
+$("startBtn").addEventListener("click",()=>{
+  const m=currentMode;
+  sessionData={mode:m,sets:[]};totalSteps=0;_totalStepsOffset=0;sessionSec=0;currentSetIdx=0;setElapsed=0;setStartTime=0;
+  setsSkippedCount=0;sessionStartBPM=cadence;
+  _sessionSaved=false;
+  $("stepsVal").textContent="0";$("durVal").textContent="00:00:00";
+  showCenter("controls");isRunning=true;isPaused=false;
+  MetEngine.setVolume(0.75);MetEngine.setAccentPattern("off");registerEngineCallbacks();
+  if(m==="regular"){sessionStartBPM=cadence;updateGauge(cadence);MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();MetEngine.start();}
+  else if(m==="cadenceRamp"){MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();startRamp();MetEngine.start();}
+  else{startClock();beginSet(0);}
+});
+
+$("pauseBtn").addEventListener("click",()=>{
+  isPaused=!isPaused;$("pauseBtn").innerHTML=isPaused?"▶":"❚❚";
+  if(isPaused){if(setStartTime>0)setElapsed+=Math.round((performance.now()-setStartTime)/1000);setStartTime=0;MetEngine.clearDuration();MetEngine.pause();clearTimeout(setDurTimerID);}
+  else{
+    setStartTime=performance.now();
+    if(!isResting){
+      const s=plannedSets[currentSetIdx];
+      if(s&&s.duration>0){
+        const rem=Math.max(0,s.duration-setElapsed);
+        if(rem>0){MetEngine.resume();setTimeout(()=>{if(!isRunning||isPaused||isResting)return;const idx=currentSetIdx;MetEngine.setDurationFromNow(rem,()=>{if(!isRunning||isPaused||isResting)return;onActiveEnd(idx);});},10);}
+        else{MetEngine.resume();onActiveEnd(currentSetIdx);}
+      }else{MetEngine.resume();}
+    }
+  }
+});
+
+$("stopBtn").addEventListener("click",()=>{
+  clearTimeout(setDurTimerID);clearInterval(restIntervalID);
+  _totalStepsOffset+=MetEngine.getScheduledBeats();totalSteps=_totalStepsOffset;$("stepsVal").textContent=totalSteps;
+  MetEngine.stop();stopRamp();stopClock();
+  if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
+  closePhase();finaliseSet();_saveAthlSession(true);
+  isRunning=false;isPaused=false;isResting=false;
+  showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
+  if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
+});
+
+window.addEventListener("beforeunload",()=>{if(sessionSec>=3)_saveAthlSession(true);});
+
+function adjustCad(delta){
+  if(isRunning&&!isResting&&!flexMode&&currentMode!=="regular"&&currentMode!=="cadenceRamp"){if(!confirm("Enable Flexible Mode to change cadence mid-set?"))return;flexMode=true;}
+  if(currentPhase&&isRunning&&!isResting)closePhase();
+  cadence=clamp(cadence+delta,40,420);updateGauge(cadence);updateInfo();MetEngine.setBPM(cadence);
+  if(currentSetData&&isRunning&&!isResting)openPhase(cadence);
+}
+$("bM1").addEventListener("click",()=>adjustCad(-1));
+$("bM5").addEventListener("click",()=>adjustCad(-5));
+$("bP1").addEventListener("click",()=>adjustCad(+1));
+$("bP5").addEventListener("click",()=>adjustCad(+5));
+$("bHalf").addEventListener("click",()=>adjustCad(Math.round(cadence*0.5)-cadence));
+$("bDbl").addEventListener("click",()=>adjustCad(Math.round(cadence*2)-cadence));
+$("restPlus").addEventListener("click",()=>{restRemaining+=10;restTotal+=10;if(currentSetData)currentSetData.restExtensions++;$("restCnt").textContent=restRemaining;});
+
+$("skipBtn").addEventListener("click",()=>{
+  const m=currentMode;
+  if(m==="regular"||m==="cadenceRamp"){_totalStepsOffset+=MetEngine.getScheduledBeats();totalSteps=_totalStepsOffset;$("stepsVal").textContent=totalSteps;endSession();return;}
+  if(!isRunning)return;setsSkippedCount++;clearTimeout(setDurTimerID);clearInterval(restIntervalID);
+  if(isResting)onRestEnd(currentSetIdx);else onActiveEnd(currentSetIdx);
+});
+
+function showAchToast(a){$("achToastIcon").textContent=a.icon||"🏆";$("achToastName").textContent=a.name;const t=$("achToast");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3000);}
+function showAchievements(list){if(!list||!list.length)return;list.forEach((a,i)=>setTimeout(()=>showAchToast(a),i*3400));}
+
+let _lastSaved=0;
+let _sessionSaved=false;
+// ── Navigation guard — confirm before leaving active session ─────────────
+function navGuard(dest){
+  if(isRunning){
+    if(!confirm("End current session and leave?")) return;
+    // Save and stop before navigating
+    clearTimeout(setDurTimerID);clearInterval(restIntervalID);
+    _totalStepsOffset+=MetEngine.getScheduledBeats();
+    totalSteps=_totalStepsOffset;
+    MetEngine.stop();stopRamp();stopClock();
+    if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
+    closePhase();finaliseSet();_saveAthlSession(true);
+    isRunning=false;isPaused=false;isResting=false;
+  }
+  window.location.href=dest;
+}
+
+function _saveAthlSession(isManualStop){
+  if(sessionSec<3)return;
+  if(_sessionSaved)return;
+  const now=Date.now();if(now-_lastSaved<2000)return;_lastSaved=now;
+  _sessionSaved=true;
+  closePhase();
+  if(currentSetData&&isManualStop){if(!currentSetData.actualActive)currentSetData.actualActive=Math.round((performance.now()-setStartTime)/1000);finaliseSet();}
+  let totalActive=0,totalRest=0,setsComp=sessionData.sets.length;
+  sessionData.sets.forEach(s=>{totalActive+=s.actualActive||s.plannedDur||0;totalRest+=s.actualRest||s.plannedRest||0;});
+  if(currentMode==="regular"||currentMode==="cadenceRamp"){totalActive=sessionSec;totalRest=0;setsComp=0;}
+  const payload={
+    app_mode:"athletic",sub_mode:currentMode,
+    total_duration_sec:sessionSec,total_active_sec:totalActive,total_rest_sec:totalRest,
+    starting_cadence:sessionStartBPM,ending_cadence:cadence,total_steps:totalSteps,
+    sets_completed:setsComp,sets_skipped:setsSkippedCount,flexible_mode_used:flexMode,user_notes:"",
+    sets_detail:sessionData.sets.map(s=>({
+      set_number:s.setNum,planned_cadence:s.plannedCadence,planned_dur:s.plannedDur,planned_rest:s.plannedRest,
+      actual_active_sec:s.actualActive||s.plannedDur||0,actual_rest_sec:s.actualRest||s.plannedRest||0,
+      rest_extensions:s.restExtensions||0,
+      total_steps:(s.phases||[]).reduce((a,p)=>a+(p.steps||0),0),
+      phases:(s.phases||[]).map(p=>({cadence:p.cadence,start_time_sec:p.startSec||0,end_time_sec:p.endSec||0,durationSec:p.durationSec||0,steps:p.steps||0})),
+    })),
+  };
+  if(typeof MetStorage!=="undefined"){
+    MetStorage.saveSession(payload);
+    const kb=MetStorage.getStorageUsageKB();
+    if(kb>4000){const w=$("storageWarn");if(w){w.classList.add("show");setTimeout(()=>w.classList.remove("show"),6000);}}
+    const t=Date.now();
+    const newAch=MetStorage.getAchievements().filter(a=>{if(!a.unlocked||!a.unlocked_date)return false;return(t-new Date(a.unlocked_date).getTime())<5000;});
+    if(newAch.length)showAchievements(newAch);
+  }
+}
+
+$("summaryBtn").addEventListener("click",openSummary);
+$("sumBackBtn").addEventListener("click",()=>goBack());
+function openSummary(){
+  const m=sessionData.mode||currentMode;
+  $("sumModeTag").textContent=(MODES.find(x=>x.id===m)?.name||m).toUpperCase();
+  let tAct=0,tRest=0;const cw=[];
+  sessionData.sets.forEach(s=>{tAct+=s.actualActive||s.plannedDur||0;tRest+=s.actualRest||s.plannedRest||0;(s.phases||[]).forEach(p=>{if(p.durationSec>0)cw.push({c:p.cadence,d:p.durationSec});});if(!(s.phases||[]).length)cw.push({c:s.plannedCadence,d:s.actualActive||s.plannedDur||0});});
+  const tw=cw.reduce((a,x)=>a+x.d,0);const avgC=tw>0?Math.round(cw.reduce((a,x)=>a+(x.c*x.d),0)/tw):cadence;
+  // Ramp mode — use rampPhases for summary
+  const isRampMode = (sessionData.mode||currentMode)==="cadenceRamp";
+
+  if(isRampMode && rampPhases.length>0){
+    const totalRampDur = rampPhases.reduce((a,p)=>a+p.durationSec,0);
+    const totalRampSteps = totalSteps;
+    const avgRampC = rampPhases.length>0
+      ? Math.round(rampPhases.reduce((a,p)=>a+(p.cadence*(p.durationSec||1)),0)/Math.max(totalRampDur,1))
+      : cadence;
+    $("sumTotals").innerHTML=`
+      <div class="sum-row"><span class="sl">Cadence Steps</span><span class="sv g">${rampPhases.length}</span></div>
+      <div class="sum-row"><span class="sl">Avg Cadence</span><span class="sv g">${avgRampC} SPM</span></div>
+      <div class="sum-row"><span class="sl">Total Duration</span><span class="sv">${fmtHMS(sessionSec)}</span></div>
+      <div class="sum-row"><span class="sl">Total Steps</span><span class="sv">${totalRampSteps}</span></div>`;
+    $("sumSetsList").innerHTML="";
+    $("sum-sets-label") && ($("sum-sets-label").textContent="Cadence Breakdown");
+    rampPhases.forEach((p,i)=>{
+      const card=document.createElement("div"); card.className="sum-card";
+      card.innerHTML=`<div class="sum-card-hdr" onclick="const b=this.nextElementSibling;b.classList.toggle('open');">
+        <span class="sum-card-name">STEP ${i+1} — ${p.cadence} SPM</span>
+        <span class="sum-card-meta">${fmtHMS(p.durationSec||0)} · ${p.steps||0} steps</span>
+        <span class="sum-chev">▾</span>
+      </div>
+      <div class="sum-card-body">
+        <div class="sum-row"><span class="sl">Cadence</span><span class="sv g">${p.cadence} SPM</span></div>
+        <div class="sum-row"><span class="sl">Duration</span><span class="sv">${fmtHMS(p.durationSec||0)}</span></div>
+        <div class="sum-row"><span class="sl">Steps</span><span class="sv">${p.steps||0}</span></div>
+      </div>`;
+      $("sumSetsList").appendChild(card);
+    });
+  } else {
+  $("sumTotals").innerHTML=`<div class="sum-row"><span class="sl">Total Sets</span><span class="sv g">${sessionData.sets.length}</span></div><div class="sum-row"><span class="sl">Avg Cadence</span><span class="sv g">${avgC} SPM</span></div><div class="sum-row"><span class="sl">Total Active</span><span class="sv">${fmtHMS(tAct)}</span></div><div class="sum-row"><span class="sl">Total Rest</span><span class="sv">${fmtHMS(tRest)}</span></div><div class="sum-row"><span class="sl">Total Duration</span><span class="sv">${fmtHMS(tAct+tRest)}</span></div><div class="sum-row"><span class="sl">Total Steps</span><span class="sv">${totalSteps}</span></div>`;
+  $("sumSetsList").innerHTML="";
+  if(!sessionData.sets.length){$("sumSetsList").innerHTML='<div style="font-size:9px;color:rgba(255,255,255,0.3);text-align:center;padding:14px;">Free run — no sets recorded</div>';}
+  sessionData.sets.forEach(s=>{
+    const aS=fmtHMS(s.actualActive||s.plannedDur||0),rS=fmtHMS(s.actualRest||s.plannedRest||0),tS=fmtHMS((s.actualActive||s.plannedDur||0)+(s.actualRest||s.plannedRest||0));
+    const hasSub=(s.phases||[]).length>1;
+    let body=`<div class="sum-row"><span class="sl">Cadence</span><span class="sv">${s.plannedCadence} SPM</span></div><div class="sum-row"><span class="sl">Active</span><span class="sv">${aS}</span></div><div class="sum-row"><span class="sl">Rest</span><span class="sv">${rS}</span></div><div class="sum-row"><span class="sl">Total</span><span class="sv g">${tS}</span></div>`;
+    if(hasSub){body+=`<div class="sub-ph-lbl">Cadence Sub-phases</div>`;s.phases.forEach((p,pi)=>{body+=`<div class="sub-ph"><div class="sum-row"><span class="sl">Phase ${pi+1}</span><span class="sv g">${p.cadence} SPM</span></div><div class="sum-row"><span class="sl">Duration</span><span class="sv">${fmtHMS(p.durationSec||0)}</span></div><div class="sum-row"><span class="sl">Steps</span><span class="sv">${p.steps||0}</span></div></div>`;});}
+    if(s.restExtensions>0)body+=`<div class="sum-row"><span class="sl">+10s Extensions</span><span class="sv">${s.restExtensions}×</span></div>`;
+    const card=document.createElement("div");card.className="sum-card";
+    card.innerHTML=`<div class="sum-card-hdr" onclick="const b=this.nextElementSibling;b.classList.toggle('open');this.querySelector('.sum-chev').style.transform=b.classList.contains('open')?'rotate(180deg)':'';">
+      <span class="sum-card-name">SET ${s.setNum}</span><span class="sum-card-meta">${s.plannedCadence} SPM · ${tS}</span><span class="sum-chev">▾</span>
+    </div><div class="sum-card-body">${body}</div>`;
+    $("sumSetsList").appendChild(card);
+  });
+  } // end else non-ramp
+  goTo("screenSummary");
+}
+
+function renderModeList(){
+  $("modeList").innerHTML="";
+  MODES.forEach(m=>{const d=document.createElement("div");d.className="mode-item"+(m.id===currentMode?" selected":"");d.innerHTML=`<div class="mode-icon">${m.icon}</div><div class="mode-info"><div class="mode-name">${m.name}</div><div class="mode-desc">${m.desc}</div></div><div class="mode-arrow">›</div>`;d.addEventListener("click",()=>openConfig(m.id));$("modeList").appendChild(d);});
+}
+
+function openConfig(id){
+  currentMode=id;const m=MODES.find(x=>x.id===id);
+  $("cfgTitle").textContent=m.name;$("cfgBadge").textContent=m.name.replace("—","").trim().toUpperCase().split(" ").slice(0,2).join(" ");
+  renderConfigBody(id);goTo("screenConfig");
+  document.querySelectorAll(".mode-item").forEach(el=>el.classList.toggle("selected",el.querySelector(".mode-name").textContent===m.name));
+}
+
+function renderConfigBody(id){
+  const body=$("cfgBody");body.innerHTML="";
+  if(id==="regular"){body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Cadence</div><div class="cfg-field"><div class="cfg-label">Starting cadence (SPM)</div><input class="cfg-input" id="c_cadence" type="number" value="140" min="40" max="420"/></div></div><div class="cfg-section" style="background:rgba(46,204,113,0.04);border-color:rgba(46,204,113,0.12);"><div style="font-size:9px;color:rgba(255,255,255,0.4);line-height:1.6;">🏃 Free run. No time limit, no sets. Press END SESSION to finish.</div></div>`;}
+  else if(id==="timedRun"){body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Run Settings</div><div class="cfg-row2"><div class="cfg-field"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence" type="number" value="140" min="40" max="420"/></div><div class="cfg-field"><div class="cfg-label">Duration</div>
+<div class="time-picker-wrap">
+  <input class="tp-inp" id="c_dur_h" type="number" min="0" max="23" value="0" placeholder="HH"/>
+  <span class="tp-sep">:</span>
+  <input class="tp-inp" id="c_dur_m" type="number" min="0" max="59" value="10" placeholder="MM"/>
+  <span class="tp-sep">:</span>
+  <input class="tp-inp" id="c_dur_s" type="number" min="0" max="59" value="0" placeholder="SS"/>
+</div>
+<div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div></div></div></div>`;}
+  else if(id==="fixedInterval"){
+    body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Interval Settings</div>
+<div class="cfg-row2" style="margin-bottom:8px;">
+  <div class="cfg-field"><div class="cfg-label">Sets (max 20)</div><input class="cfg-input" id="c_sets" type="number" value="4" min="1" max="20"/></div>
+  <div class="cfg-field"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence_fi" type="number" value="140" min="40" max="420"/></div>
+</div>
+<div class="cfg-row2">
+  <div class="cfg-field"><div class="cfg-label">Duration</div>
+    <div class="time-picker-wrap">
+      <input class="tp-inp" id="c_dur_h" type="number" min="0" max="23" value="0" placeholder="HH"/>
+      <span class="tp-sep">:</span>
+      <input class="tp-inp" id="c_dur_m" type="number" min="0" max="59" value="1" placeholder="MM"/>
+      <span class="tp-sep">:</span>
+      <input class="tp-inp" id="c_dur_s" type="number" min="0" max="59" value="0" placeholder="SS"/>
+    </div>
+    <div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div>
+  </div>
+  <div class="cfg-field"><div class="cfg-label">Rest</div>
+    <div class="time-picker-wrap">
+      <input class="tp-inp" id="c_rest_h" type="number" min="0" max="23" value="0" placeholder="HH"/>
+      <span class="tp-sep">:</span>
+      <input class="tp-inp" id="c_rest_m" type="number" min="0" max="59" value="1" placeholder="MM"/>
+      <span class="tp-sep">:</span>
+      <input class="tp-inp" id="c_rest_s" type="number" min="0" max="59" value="0" placeholder="SS"/>
+    </div>
+    <div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div>
+  </div>
+</div><div class="cfg-field" style="margin-top:6px;"><div class="cfg-label">Cadence type</div><select class="cfg-select" id="c_cadMode"><option value="uniform">Uniform — same cadence all sets</option><option value="perSet">Per set — different cadence each set</option></select></div><div class="cfg-field" id="c_unifWrap"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence_fi_per" type="number" value="140" min="40" max="420"/></div></div><div class="cfg-section" id="c_perSetSection" style="display:none"><div class="cfg-section-label">Cadence per set</div><div class="sets-list" id="c_perSetRows"></div></div><div class="cfg-section"><div class="flex-row"><input type="checkbox" id="c_flex"/><label for="c_flex">Allow cadence changes mid-set (Flexible Mode)</label></div></div>`;
+    setTimeout(()=>{const cm=$("c_cadMode"),sn=$("c_sets");const rebuild=()=>{const n=Math.min(20,parseInt(sn.value)||4);const c=$("c_perSetRows");if(!c)return;c.innerHTML="";for(let i=0;i<n;i++){const r=document.createElement("div");r.className="set-row";r.innerHTML=`<span class="set-row-num">SET ${i+1}</span><input type="number" value="140" min="40" max="420" placeholder="SPM"/>`;c.appendChild(r);}};cm&&cm.addEventListener("change",()=>{const ps=cm.value==="perSet";$("c_unifWrap").style.display=ps?"none":"flex";$("c_perSetSection").style.display=ps?"block":"none";if(ps)rebuild();});sn&&sn.addEventListener("input",()=>{if(cm.value==="perSet")rebuild();});},60);
+  }
+  else if(id==="customSemi"){
+    body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Common Rest</div><div class="cfg-field"><div class="cfg-label">Rest for all sets</div>
+<div class="time-picker-wrap">
+  <input class="tp-inp" id="c_rest_h" type="number" min="0" max="23" value="0" placeholder="HH"/>
+  <span class="tp-sep">:</span>
+  <input class="tp-inp" id="c_rest_m" type="number" min="0" max="59" value="1" placeholder="MM"/>
+  <span class="tp-sep">:</span>
+  <input class="tp-inp" id="c_rest_s" type="number" min="0" max="59" value="0" placeholder="SS"/>
+</div>
+<div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div></div></div><div class="cfg-section"><div class="cfg-section-label">Per-set cadence &amp; duration</div><div style="display:flex;gap:0;padding-left:42px;margin-bottom:4px;"><span style="flex:1;text-align:center;font-size:7px;color:rgba(255,255,255,0.25);">SPM</span><span style="flex:1;text-align:center;font-size:7px;color:rgba(255,255,255,0.25);">DUR(hh:mm:ss)</span><span style="width:32px;"></span></div><div class="sets-list" id="c_semiRows"></div><button class="add-set-btn" id="c_semiAdd">+ ADD SET</button></div><div class="cfg-section"><div class="flex-row"><input type="checkbox" id="c_flex"/><label for="c_flex">Allow cadence changes mid-set (Flexible Mode)</label></div></div>`;
+    setTimeout(()=>{const c=$("c_semiRows");const add=i=>{const r=document.createElement("div");r.className="set-row";r.innerHTML=`
+<div style="width:100%;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <span class="set-row-num">SET ${i+1}</span>
+    <div style="flex:1;">
+      <div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:2px;">SPM</div>
+      <input type="number" value="140" min="40" max="420" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;color:white;font-size:13px;text-align:center;outline:none;"/>
+    </div>
+    <div class="set-row-del" onclick="this.closest('.set-row').remove()">×</div>
+  </div>
+  <div>
+    <div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:2px;">DURATION</div>
+    <div class="time-seg">
+      <input class="time-seg-inp" type="number" min="0" max="23" value="0" data-role="dur-h" placeholder="H"/>
+      <span class="time-seg-sep">:</span>
+      <input class="time-seg-inp" type="number" min="0" max="59" value="1" data-role="dur-m" placeholder="M"/>
+      <span class="time-seg-sep">:</span>
+      <input class="time-seg-inp" type="number" min="0" max="59" value="0" data-role="dur-s" placeholder="S"/>
+    </div>
+  </div>
+</div>`;c.appendChild(r);};for(let i=0;i<3;i++)add(i);$("c_semiAdd").addEventListener("click",()=>{if(c.children.length>=20){alert("Max 20 sets.");return;}add(c.children.length);});},60);
+  }
+  else if(id==="customFull"){
+    body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Per-set cadence, duration &amp; rest (max 20)</div><div style="display:flex;gap:0;padding-left:42px;margin-bottom:4px;"><span style="flex:1;text-align:center;font-size:7px;color:rgba(255,255,255,0.25);">SPM</span><span style="flex:1;text-align:center;font-size:7px;color:rgba(255,255,255,0.25);">DUR(hh:mm:ss)</span><span style="flex:1;text-align:center;font-size:7px;color:rgba(255,255,255,0.25);">REST(hh:mm:ss)</span><span style="width:32px;"></span></div><div class="sets-list" id="c_fullRows"></div><button class="add-set-btn" id="c_fullAdd">+ ADD SET</button></div><div class="cfg-section"><div class="flex-row"><input type="checkbox" id="c_flex"/><label for="c_flex">Allow cadence changes mid-set (Flexible Mode)</label></div></div>`;
+    setTimeout(()=>{const c=$("c_fullRows");const add=i=>{const r=document.createElement("div");r.className="set-row";r.innerHTML=`
+<div style="width:100%;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <span class="set-row-num">SET ${i+1}</span>
+    <div style="flex:1;display:flex;align-items:center;gap:6px;">
+      <div style="flex:1;">
+        <div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:2px;">SPM</div>
+        <input type="number" value="140" min="40" max="420" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;color:white;font-size:13px;text-align:center;outline:none;"/>
+      </div>
+    </div>
+    <div class="set-row-del" onclick="this.closest('.set-row').remove()">×</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <div>
+      <div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:2px;">DURATION</div>
+      <div class="time-seg">
+        <input class="time-seg-inp" type="number" min="0" max="23" value="0" data-role="dur-h" placeholder="H"/>
+        <span class="time-seg-sep">:</span>
+        <input class="time-seg-inp" type="number" min="0" max="59" value="1" data-role="dur-m" placeholder="M"/>
+        <span class="time-seg-sep">:</span>
+        <input class="time-seg-inp" type="number" min="0" max="59" value="0" data-role="dur-s" placeholder="S"/>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:2px;">REST</div>
+      <div class="time-seg">
+        <input class="time-seg-inp" type="number" min="0" max="23" value="0" data-role="rest-h" placeholder="H"/>
+        <span class="time-seg-sep">:</span>
+        <input class="time-seg-inp" type="number" min="0" max="59" value="1" data-role="rest-m" placeholder="M"/>
+        <span class="time-seg-sep">:</span>
+        <input class="time-seg-inp" type="number" min="0" max="59" value="0" data-role="rest-s" placeholder="S"/>
+      </div>
+    </div>
+  </div>
+</div>`;c.appendChild(r);};for(let i=0;i<3;i++)add(i);$("c_fullAdd").addEventListener("click",()=>{if(c.children.length>=20){alert("Max 20 sets.");return;}add(c.children.length);});},60);
+  }
+  else if(id==="cadenceRamp"){body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Ramp Settings</div><div class="cfg-row2"><div class="cfg-field"><div class="cfg-label">Start (SPM)</div><input class="cfg-input" id="c_startCad" type="number" value="120" min="40" max="420"/></div><div class="cfg-field"><div class="cfg-label">End (SPM)</div><input class="cfg-input" id="c_endCad" type="number" value="180" min="40" max="420"/></div><div class="cfg-field"><div class="cfg-label">Step (SPM)</div><input class="cfg-input" id="c_step" type="number" value="5" min="1" max="50"/></div><div class="cfg-field"><div class="cfg-label">Step dur (s)</div><input class="cfg-input" id="c_stepDur" type="number" value="30" min="5" max="300"/></div></div></div><div class="cfg-section" style="background:rgba(46,204,113,0.04);border-color:rgba(46,204,113,0.12);"><div style="font-size:9px;color:rgba(255,255,255,0.4);line-height:1.6;">📈 Cadence ramps from Start to End SPM. If Start < End it ramps up, if Start > End it ramps down. Step size applied every Step Duration seconds.</div></div>`;}
+}
+
+$("proceedBtn").addEventListener("click",()=>{
+  const id=currentMode;storedConfig={};flexMode=$("c_flex")?.checked||false;
+  if(id==="regular"){storedConfig.cadence=parseInt($("c_cadence")?.value||140);cadence=storedConfig.cadence;}
+  else if(id==="timedRun"){storedConfig.cadence=parseInt($("c_cadence")?.value||140);storedConfig.duration=((parseInt($("c_dur_h")?.value)||0)*3600+(parseInt($("c_dur_m")?.value)||0)*60+(parseInt($("c_dur_s")?.value)||0))||600;plannedSets=[{cadence:storedConfig.cadence,duration:storedConfig.duration,rest:0}];}
+  else if(id==="fixedInterval"){
+    const n=Math.min(20,parseInt($("c_sets")?.value||4));const dur=((parseInt($("c_dur_h")?.value)||0)*3600+(parseInt($("c_dur_m")?.value)||0)*60+(parseInt($("c_dur_s")?.value)||0))||60,rest=((parseInt($("c_rest_h")?.value)||0)*3600+(parseInt($("c_rest_m")?.value)||0)*60+(parseInt($("c_rest_s")?.value)||0))||0;const perSet=$("c_cadMode")?.value==="perSet";const rows=document.querySelectorAll("#c_perSetRows .set-row input");plannedSets=[];
+    for(let i=0;i<n;i++){let c=parseInt($("c_cadence_fi")?.value||140);if(perSet&&rows[i])c=parseInt(rows[i].value)||140;plannedSets.push({cadence:c,duration:dur,rest:i===n-1?0:rest});}
+    if(!plannedSets.length){alert("Configure at least 1 set.");return;}
+  }
+  else if(id==="customSemi"){const rest=((parseInt($("c_rest_h")?.value)||0)*3600+(parseInt($("c_rest_m")?.value)||0)*60+(parseInt($("c_rest_s")?.value)||0))||0;plannedSets=[];document.querySelectorAll("#c_semiRows .set-row").forEach((row,i,arr)=>{const inp=row.querySelectorAll("input");const durSegs=row.querySelectorAll("[data-role^=dur]");
+      const dur2=(parseInt(durSegs[0]?.value||0)*3600)+(parseInt(durSegs[1]?.value||0)*60)+(parseInt(durSegs[2]?.value||0));
+      plannedSets.push({cadence:parseInt(row.querySelectorAll("input")[0]?.value||140),duration:dur2||60,rest:i===arr.length-1?0:rest});});if(!plannedSets.length){alert("Add at least 1 set.");return;}}
+  else if(id==="customFull"){plannedSets=[];const rows=document.querySelectorAll("#c_fullRows .set-row");rows.forEach((row,i)=>{const inp=row.querySelectorAll("input");const allInp=row.querySelectorAll("input");
+      const cad=parseInt(allInp[0]?.value||140);
+      const durSegs=row.querySelectorAll("[data-role^=dur]");
+      const restSegs=row.querySelectorAll("[data-role^=rest]");
+      const dur=(parseInt(durSegs[0]?.value||0)*3600)+(parseInt(durSegs[1]?.value||0)*60)+(parseInt(durSegs[2]?.value||0));
+      const rst=i===rows.length-1?0:(parseInt(restSegs[0]?.value||0)*3600)+(parseInt(restSegs[1]?.value||0)*60)+(parseInt(restSegs[2]?.value||0));
+      plannedSets.push({cadence:cad,duration:dur||60,rest:rst});});if(!plannedSets.length){alert("Add at least 1 set.");return;}}
+  else if(id==="cadenceRamp"){
+    const sc=parseInt($("c_startCad")?.value||120);
+    const ec=parseInt($("c_endCad")?.value||180);
+    if(sc===ec){
+      if(!confirm("Start and End cadence are the same. The metronome will run at a fixed cadence. Continue?")) return;
+    }
+    storedConfig={startCadence:sc,endCadence:ec,step:parseInt($("c_step")?.value||5),stepDur:parseInt($("c_stepDur")?.value||30)};
+    cadence=storedConfig.startCadence;
+  }
+  const mName=MODES.find(x=>x.id===id).name;
+  $("mainModeLabel").textContent=mName.replace("—","").trim().toUpperCase().substring(0,20);
+  updateGauge(cadence);updateInfo();screenHistory=["screenMain"];goTo("screenMain",false);
+  $("screenMain").classList.add("active");document.querySelectorAll(".screen:not(#screenMain)").forEach(s=>s.classList.remove("active","slide-left"));
+});
+$("cancelCfgBtn").addEventListener("click",()=>goBack());
+
+let screenHistory=["screenMain"];
+function goTo(id,addToHistory=true){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active","slide-left"));
+  const target=$(id);target.classList.add("active");
+  if(addToHistory&&screenHistory.length){const prev=$(screenHistory[screenHistory.length-1]);if(prev&&prev!==target)prev.classList.add("slide-left");}
+  if(addToHistory)screenHistory.push(id);
+}
+function goBack(){if(screenHistory.length<=1)return;screenHistory.pop();const prev=screenHistory[screenHistory.length-1];document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active","slide-left"));$(prev).classList.add("active");}
+
+$("changeModeBtn").addEventListener("click",()=>{if(isRunning){alert("Stop the session before changing mode.");return;}renderModeList();goTo("screenMode");});
+$("modeBackBtn").addEventListener("click",()=>goBack());
+$("cfgBackBtn").addEventListener("click",()=>goBack());
+
+updateGauge(cadence);updateInfo();showCenter("start");renderModeList();
+
+// ── Tap-to-edit cadence ───────────────────────────────────
+(function(){
+  const gText   = document.getElementById("gText");
+  const wrap    = document.getElementById("cadenceEditWrap");
+  const input   = document.getElementById("cadenceInput");
+
+  function openEdit(){
+    // Don't open during ramp — cadence is auto-controlled
+    if(currentMode==="cadenceRamp" && isRunning) return;
+    input.value = cadence;
+    wrap.classList.add("show");
+    // Small delay so the keyboard doesn't interfere with the show animation
+    setTimeout(()=>{ input.focus(); input.select(); }, 80);
+  }
+
+  function confirmEdit(){
+    const v = clamp(parseInt(input.value)||cadence, 40, 420);
+    wrap.classList.remove("show");
+    if(v !== cadence){
+      adjustCad(v - cadence);
+    }
+  }
+
+  function cancelEdit(){
+    wrap.classList.remove("show");
+  }
+
+  // Tap on the gauge number
+  gText.addEventListener("click", openEdit);
+
+  // Confirm on Enter or Done (mobile keyboard)
+  input.addEventListener("keydown", e=>{
+    if(e.key==="Enter"){ e.preventDefault(); confirmEdit(); }
+    if(e.key==="Escape"){ cancelEdit(); }
+  });
+
+  // Confirm when input loses focus (user taps elsewhere)
+  input.addEventListener("blur", ()=>{
+    // Small delay to allow Enter keydown to fire first
+    setTimeout(confirmEdit, 120);
+  });
+
+  // Prevent tapping the input itself from bubbling to stage
+  input.addEventListener("click", e=>e.stopPropagation());
+  wrap.addEventListener("click",  e=>e.stopPropagation());
+})();
+if(typeof MetOnboarding!=="undefined"){const _tourForce=new URLSearchParams(window.location.search).get("replayTour")==="1";MetOnboarding.init("athletic",{forceReplay:_tourForce});}
+
+window.MetVoice={
+  app:"athletic",
+  start:()=>{if(isRunning)return;const m=currentMode;sessionData={mode:m,sets:[]};totalSteps=0;_totalStepsOffset=0;sessionSec=0;currentSetIdx=0;setElapsed=0;setStartTime=0;setsSkippedCount=0;sessionStartBPM=cadence;$("stepsVal").textContent="0";$("durVal").textContent="00:00:00";showCenter("controls");isRunning=true;isPaused=false;MetEngine.setVolume(0.75);MetEngine.setAccentPattern("off");registerEngineCallbacks();if(m==="regular"){sessionStartBPM=cadence;updateGauge(cadence);MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();MetEngine.start();}else if(m==="cadenceRamp"){MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();startRamp();MetEngine.start();}else{startClock();beginSet(0);}},
+  stop:()=>$("stopBtn").click(),
+  pause:()=>{if(isRunning&&!isPaused)$("pauseBtn").click();},
+  resume:()=>{if(!isRunning||isPaused)$("pauseBtn").click();},
+  setBPM:(v)=>adjustCad(v-cadence),getBPM:()=>cadence,
+  isRunning:()=>isRunning,getMode:()=>currentMode,
+  setMode:(id)=>openConfig(id),changeMode:()=>$("changeModeBtn").click(),
+  skipSet:()=>$("skipBtn").click(),showSummary:()=>$("summaryBtn").click(),
+  setInstr:()=>{},tapTempo:()=>{},
+};
+</script>
+</body>
+</html>
