@@ -1927,7 +1927,20 @@ window.MetVoice = {
 updateDynamicPanel();
 rebuildCustomAccentUI();
 rebuildBeatDots();
-setBPM(120);
+
+// ── FIX: read saved default BPM from Settings ───────────────────
+// Previously this always called setBPM(120) regardless of what the
+// user set under Settings → Music Defaults → Default BPM.
+// dashboard.html correctly WRITES that preference via
+// MetStorage.updateSettings(), but nothing ever READ it back here.
+// Falls back to 120 if storage.js isn't loaded yet or no setting
+// has been saved, so behavior for anyone who's never touched
+// Settings is completely unchanged.
+let _initialBPM = 120;
+if(typeof MetStorage !== "undefined"){
+  _initialBPM = MetStorage.getSettings().default_cadence_music || 120;
+}
+setBPM(_initialBPM);
 
 if(typeof MetOnboarding !== "undefined"){
   const _tourForce = new URLSearchParams(window.location.search).get("replayTour")==="1";

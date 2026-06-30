@@ -303,11 +303,28 @@ const MetStorage = (function () {
 
   /**
    * Delete a session by ID.
+   *
+   * FIX: previously this only removed the session from history and left
+   * STREAKS and PERSONAL_BESTS completely untouched. Both are stored,
+   * incrementally-updated values that only ever move upward inside
+   * saveSession() — so deleting a session that set a personal best, set
+   * the longest streak, was the most-recent day of the current streak,
+   * or contributed to total sessions/practice time/mode-usage counts
+   * would leave all of those numbers stale and disconnected from what's
+   * actually left in history.
+   *
+   * Fix: after removing the session, recalculateDerivedData() rebuilds
+   * STREAKS and PERSONAL_BESTS from scratch by scanning whatever
+   * remains in SESSION_HISTORY. saveSession() is NOT changed — it still
+   * uses the original incremental _updateStreaks/_updatePersonalBests
+   * exactly as before, since that path was not broken.
    */
   function deleteSession(sessionId) {
     const history = read(KEYS.SESSION_HISTORY, []);
     const filtered = history.filter(s => s.session_id !== sessionId);
-    return write(KEYS.SESSION_HISTORY, filtered);
+    const ok = write(KEYS.SESSION_HISTORY, filtered);
+    if (ok) recalculateDerivedData();
+    return ok;
   }
 
   /**
@@ -508,6 +525,119 @@ const MetStorage = (function () {
 
   function getPersonalBests() {
     return read(KEYS.PERSONAL_BESTS, defaultPersonalBests());
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  RECALCULATION  (used ONLY by deleteSession, see note above it)
+  //
+  //  Rebuilds STREAKS and PERSONAL_BESTS entirely from whatever is
+  //  currently in SESSION_HISTORY. This is intentionally a separate
+  //  code path from _updateStreaks/_updatePersonalBests — saveSession()
+  //  is untouched and keeps using the original incremental functions,
+  //  exactly as before deletion was ever a concern.
+  // ─────────────────────────────────────────────────────────────
+  function recalculateDerivedData() {
+    const history = read(KEYS.SESSION_HISTORY, []);
+
+    // ── Rebuild PERSONAL_BESTS from scratch ──
+    // Same field-by-field logic as _updatePersonalBests, just looped
+    // over the full remaining history instead of one new session.
+    const pb = defaultPersonalBests();
+    history.forEach(session => {
+      const durMin = session.total_duration_sec / 60;
+      if (durMin > pb.longest_session_minutes) {
+        pb.longest_session_minutes = Math.round(durMin * 10) / 10;
+      }
+      if (session.app_mode === "athletic") {
+        const maxCad = Math.max(session.starting_cadence, session.ending_cadence);
+        if (maxCad > pb.highest_cadence_ever) pb.highest_cadence_ever = maxCad;
+
+        (session.sets_detail || []).forEach(set => {
+          const phases = set.phases || [];
+          phases.forEach(ph => {
+            const durSec = ph.durationSec || ph.duration_sec || 0;
+            if (durSec >= 60 && ph.cadence > pb.highest_cadence_1min) {
+              pb.highest_cadence_1min = ph.cadence;
+            }
+            if (durSec >= 300 && ph.cadence > pb.highest_cadence_5min) {
+              pb.highest_cadence_5min = ph.cadence;
+            }
+          });
+          if (!phases.length) {
+            const aSec = set.actual_active_sec || set.planned_dur || 0;
+            if (aSec >= 60 && set.planned_cadence > pb.highest_cadence_1min) {
+              pb.highest_cadence_1min = set.planned_cadence;
+            }
+            if (aSec >= 300 && set.planned_cadence > pb.highest_cadence_5min) {
+              pb.highest_cadence_5min = set.planned_cadence;
+            }
+          }
+        });
+
+        if (session.sets_completed > pb.most_sets_single_session) {
+          pb.most_sets_single_session = session.sets_completed;
+        }
+        if (session.sub_mode === "cadenceRamp" && session.ending_cadence > pb.fastest_ramp_peak) {
+          pb.fastest_ramp_peak = session.ending_cadence;
+        }
+      }
+      if (session.app_mode === "music") {
+        const maxBPM = Math.max(session.starting_cadence, session.ending_cadence);
+        if (maxBPM > pb.highest_bpm_music) pb.highest_bpm_music = maxBPM;
+      }
+    });
+    write(KEYS.PERSONAL_BESTS, pb);
+
+    // ── Rebuild STREAKS from scratch ──
+    // Preserve fields that aren't derivable from session content alone
+    // (flexible_mode_uses, rest_extension_uses, instruments_used,
+    // instrument_time_sec are cumulative counters of USAGE EVENTS, not
+    // simple aggregates of stored session fields in every case — but
+    // total_sessions_all_time, total_practice_minutes, sessions_per_mode,
+    // current_streak_days and longest_streak_days ARE fully derivable
+    // from history, so those are the ones rebuilt here.)
+    const existing = read(KEYS.STREAKS, defaultStreaks());
+
+    const sessionsPerMode = {};
+    let totalMinutes = 0;
+    history.forEach(s => {
+      const modeKey = s.app_mode + "_" + s.sub_mode;
+      sessionsPerMode[modeKey] = (sessionsPerMode[modeKey] || 0) + 1;
+      totalMinutes += Math.round(s.total_duration_sec / 60);
+    });
+
+    // Unique sorted dates with at least one session, for streak math
+    const uniqueDates = [...new Set(history.map(s => s.date))].sort();
+
+    let longestStreak = uniqueDates.length > 0 ? 1 : 0;
+    let runLength = 1;
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const diff = daysBetween(uniqueDates[i - 1], uniqueDates[i]);
+      runLength = (diff === 1) ? runLength + 1 : 1;
+      if (runLength > longestStreak) longestStreak = runLength;
+    }
+
+    let currentRun = uniqueDates.length > 0 ? 1 : 0;
+    for (let i = uniqueDates.length - 1; i > 0; i--) {
+      const diff = daysBetween(uniqueDates[i - 1], uniqueDates[i]);
+      if (diff === 1) currentRun++;
+      else break;
+    }
+
+    const lastDate = uniqueDates.length > 0 ? uniqueDates[uniqueDates.length - 1] : null;
+    const aliveDiff = lastDate ? daysBetween(lastDate, todayStr()) : Infinity;
+    const currentStreak = (lastDate && aliveDiff <= 1) ? currentRun : 0;
+
+    const rebuiltStreaks = {
+      ...existing,                              // keep flexible_mode_uses, rest_extension_uses, instruments_used, instrument_time_sec untouched
+      total_sessions_all_time : history.length,
+      total_practice_minutes  : totalMinutes,
+      sessions_per_mode       : sessionsPerMode,
+      current_streak_days     : currentStreak,
+      longest_streak_days     : longestStreak,
+      last_session_date       : lastDate,
+    };
+    write(KEYS.STREAKS, rebuiltStreaks);
   }
 
   // ─────────────────────────────────────────────────────────────

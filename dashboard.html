@@ -22,15 +22,15 @@
   --text       : #e8f5ee;
   --text-dim   : rgba(255,255,255,0.45);
   --text-faint : rgba(255,255,255,0.22);
-  --accent     : #a78bfa;    /* purple — music */
-  --orange     : #f59e0b;    /* streak */
+  --accent     : #a78bfa;
+  --orange     : #f59e0b;
   --red        : #ef4444;
 }
 
 html,body{
   width:100%;
-  height:100%;           /* fixed height so .app can be constrained */
-  overflow:hidden;       /* prevent body-level scroll — .body div scrolls instead */
+  height:100%;
+  overflow:hidden;
   background: radial-gradient(circle at 15% 10%, rgba(0,255,120,0.03), transparent 40%),
               radial-gradient(circle at 85% 80%, rgba(100,60,255,0.02), transparent 40%),
               linear-gradient(to bottom, #04140d, #000 60%);
@@ -39,17 +39,15 @@ html,body{
   overscroll-behavior:none;
 }
 
-/* ── LAYOUT ── */
 .app{
   width:100%;
   max-width:100%;
-  height:100svh;         /* FIXED height — not min-height — this is the key fix */
+  height:100svh;
   display:flex;
   flex-direction:column;
-  overflow:hidden;       /* clip, let .body handle scroll */
+  overflow:hidden;
 }
 
-/* ── TOP NAV ── */
 .top-nav{
   position:sticky;top:0;z-index:100;
   background:rgba(4,16,10,0.92);
@@ -73,7 +71,6 @@ html,body{
   border-radius:20px;padding:2px 7px;white-space:nowrap;flex-shrink:0;
 }
 
-/* ── TAB BAR ── */
 .tab-bar{
   display:flex;border-bottom:1px solid var(--card-border);
   background:rgba(4,16,10,0.7);
@@ -82,8 +79,8 @@ html,body{
 }
 .tab-bar::-webkit-scrollbar{display:none;}
 .tab{
-  flex:1;                    /* distribute evenly across full width */
-  min-width:0;               /* allow shrinking */
+  flex:1;
+  min-width:0;
   padding:10px 6px;
   font-size:9px;letter-spacing:0.5px;text-transform:uppercase;
   color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;
@@ -92,10 +89,9 @@ html,body{
 }
 .tab.active{color:var(--green);border-bottom-color:var(--green);}
 
-/* ── SCROLL BODY ── */
 .body{
   flex:1;
-  min-height:0;           /* critical: allows flex child to shrink and scroll */
+  min-height:0;
   overflow-y:auto;
   overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
@@ -105,11 +101,9 @@ html,body{
 }
 .body::-webkit-scrollbar{display:none;}
 
-/* ── TAB PANELS ── */
 .tab-panel{display:none;}
 .tab-panel.active{display:flex;flex-direction:column;gap:14px;}
 
-/* ── CARDS ── */
 .card{
   background:var(--card);
   border:1px solid var(--card-border);
@@ -123,7 +117,6 @@ html,body{
 }
 .card-title-icon{font-size:14px;}
 
-/* ── HOME: hero stats row ── */
 .hero-row{
   display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
 }
@@ -137,7 +130,6 @@ html,body{
 .hero-stat-val.purple{color:var(--accent);}
 .hero-stat-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
 
-/* ── STREAK CARD ── */
 .streak-hero{
   display:flex;align-items:center;gap:16px;
   padding:4px 0 8px;
@@ -153,7 +145,6 @@ html,body{
   border-radius:20px;padding:2px 8px;margin-top:6px;
 }
 
-/* ── HEATMAP ── */
 .heatmap{
   display:flex;flex-direction:column;gap:3px;margin-top:4px;
 }
@@ -178,11 +169,9 @@ html,body{
 }
 .heatmap-month-label{width:11px;text-align:center;flex-shrink:0;overflow:visible;white-space:nowrap;}
 
-/* ── CHARTS ── */
 .chart-wrap{position:relative;width:100%;overflow:hidden;}
 .chart-svg{width:100%;display:block;}
 
-/* bar chart */
 .bar-chart-wrap{display:flex;flex-direction:row;gap:4px;align-items:flex-end;}
 .bar-y-scale{
   display:flex;flex-direction:column;justify-content:space-between;
@@ -210,11 +199,9 @@ html,body{
 @media(hover:hover){.bar:hover{background:linear-gradient(to top,rgba(46,204,113,0.6),rgba(46,204,113,0.9));}}
 .bar-label{font-size:6px;color:var(--text-faint);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}
 
-/* line chart */
 .line-chart-container{width:100%;overflow:hidden;position:relative;}
 .line-chart-container svg{width:100%;height:90px;display:block;}
 
-/* donut chart */
 .donut-wrap{display:flex;align-items:center;gap:16px;}
 .donut-svg{flex-shrink:0;}
 .donut-legend{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
@@ -223,7 +210,6 @@ html,body{
 .donut-lbl{font-size:9px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .donut-cnt{font-size:9px;color:var(--text);font-family:monospace;}
 
-/* ── PERSONAL BESTS ── */
 .pb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .pb-item{
   background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
@@ -232,7 +218,6 @@ html,body{
 .pb-val{font-size:20px;font-weight:800;color:var(--green);line-height:1;margin-bottom:3px;}
 .pb-label{font-size:8px;color:var(--text-dim);letter-spacing:0.5px;}
 
-/* ── ACHIEVEMENTS ── */
 .ach-progress-bar{
   height:5px;background:rgba(255,255,255,0.1);border-radius:5px;margin-bottom:12px;overflow:hidden;
 }
@@ -269,7 +254,6 @@ html,body{
   pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.5);
 }
 
-/* ── HISTORY ── */
 .history-filters{
   display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;
 }
@@ -325,19 +309,33 @@ html,body{
   transition:border-color 0.2s;
 }
 .session-note:focus{border-color:var(--green-border);}
+
+/* ── Session note actions row — Save Note + Delete Session ──────────
+   FIX: previously .note-save-btn used float:right (sitting alone next
+   to the textarea) while .session-delete-btn was rendered in a
+   SEPARATE block below it (right-aligned via text-align:right), with
+   a clear:both spacer div after both. Two different layout techniques
+   for two buttons meant to visually pair as one action row produced
+   inconsistent vertical alignment and padding between them.
+   Fix: both buttons now share one flex row, vertically centred, with
+   matching padding — no floats, no clear-fix hacks required. ── */
+.session-note-actions{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;margin-top:8px;
+}
 .session-delete-btn{
   background:transparent;border:1px solid rgba(231,76,60,0.3);
-  color:rgba(231,76,60,0.7);border-radius:8px;padding:5px 12px;
+  color:rgba(231,76,60,0.7);border-radius:8px;padding:7px 12px;
   font-size:9px;letter-spacing:0.5px;cursor:pointer;
-  transition:all 0.2s;font-family:inherit;
+  transition:all 0.2s;font-family:inherit;line-height:1;
 }
 .session-delete-btn:hover{background:rgba(231,76,60,0.1);border-color:rgba(231,76,60,0.6);color:#e74c3c;}
 
 .note-save-btn{
-  margin-top:5px;float:right;
   background:var(--green-dim);border:1px solid var(--green-border);
-  border-radius:8px;padding:4px 12px;color:var(--green);
+  border-radius:8px;padding:7px 12px;color:var(--green);
   font-size:9px;cursor:pointer;transition:background 0.2s;
+  font-family:inherit;line-height:1;
 }
 @media(hover:hover){.note-save-btn:hover{background:rgba(46,204,113,0.25);}}
 .history-empty{
@@ -352,7 +350,6 @@ html,body{
 }
 @media(hover:hover){.history-load-more:hover{background:rgba(255,255,255,0.08);}}
 
-/* ── SETTINGS ── */
 .settings-section-title{
   font-size:8px;letter-spacing:1.5px;color:var(--text-faint);
   text-transform:uppercase;margin-bottom:10px;
@@ -411,13 +408,11 @@ html,body{
 .storage-bar{height:4px;border-radius:4px;background:rgba(255,255,255,0.1);overflow:hidden;margin-top:6px;}
 .storage-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),#a8ff78);border-radius:4px;}
 .storage-text{font-size:8px;color:var(--text-faint);margin-top:4px;}
-/* Voice command rows */
 .vc-group-label{font-size:8px;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;margin:10px 0 5px;font-weight:600;}
 .vc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:4px;gap:8px;}
 .vc-cmd{font-size:10px;color:var(--green);font-weight:600;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:5px;padding:2px 7px;white-space:nowrap;}
 .vc-desc{font-size:9px;color:var(--text-dim);text-align:right;flex:1;}
 
-/* ── TOAST ── */
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
   background:rgba(4,20,12,0.96);border:1px solid var(--green-border);
@@ -430,35 +425,28 @@ html,body{
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* ── MISC ── */
 .divider{height:1px;background:var(--card-border);margin:4px 0;}
 .empty-state{text-align:center;padding:32px 16px;color:var(--text-faint);font-size:13px;}
 
-/* ═══════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
-   ═══════════════════════════════════════════════════════ */
-
-/* Desktop: cap at 480px, centre, restore body scroll */
 @media(min-width:520px){
   html,body{
-    overflow-y:auto;   /* restore body scroll on desktop */
+    overflow-y:auto;
     height:auto;
   }
   .app{
     max-width:480px;
-    height:auto;       /* let content define height on desktop */
+    height:auto;
     min-height:100svh;
     margin:0 auto;
     overflow:visible;
     box-shadow:0 0 60px rgba(0,0,0,0.5);
   }
   .body{
-    overflow-y:visible; /* desktop scrolls at body level not div level */
+    overflow-y:visible;
     flex:none;
   }
 }
 
-/* ── 1. VERY NARROW: Galaxy Z Fold5 (≤350px) ─────────── */
 @media(max-width:350px){
   .app{max-width:100%;}
   .top-nav{padding:12px 12px 8px;}
@@ -474,10 +462,9 @@ html,body{
   .setting-row-label{font-size:11px;}
 }
 
-/* ── 2. SHORT HEIGHT: iPhone SE / Nest Hub (≤680px) ────── */
 @media(max-height:680px){
   .top-nav{padding:10px 18px 8px;}
-  .tab-bar{position:sticky;} /* already sticky - ensure no extra height */
+  .tab-bar{position:sticky;}
   .tab{padding:9px 8px;font-size:7px;}
   .tab-content{padding:12px 14px;}
   .card{margin-bottom:10px;padding:14px 14px;}
@@ -488,10 +475,6 @@ html,body{
   .chart-wrap{height:70px;}
 }
 
-/* ── 3. LARGE TABLET PORTRAIT: Surface Pro / Zenbook ───── 
-   (≥768px wide AND ≥900px tall)
-   Key fix: don't vertically center — align to top.
-   Widen the container so it fills the screen.           */
 @media(min-width:768px) and (min-height:900px){
   html,body{
     height:auto;
@@ -509,7 +492,6 @@ html,body{
     overflow-y:visible;
     flex:none;
   }
-  /* Scale up typography and spacing */
   .top-nav{padding:18px 24px 14px;}
   .nav-title{font-size:18px;}
   .tab{font-size:9px;padding:13px 12px;}
@@ -523,7 +505,6 @@ html,body{
   .session-card{padding:14px 16px;}
 }
 
-/* ── 4. NEST HUB: Short landscape (≥768px wide, ≤680px tall) ── */
 @media(min-width:768px) and (max-height:680px){
   html,body{height:auto;overflow-y:auto;}
   .app{
@@ -541,12 +522,6 @@ html,body{
   .hero-stat-val{font-size:2.2rem;}
 }
 
-
-/* ═══════════════════════════════════
-   DIARY TAB
-═══════════════════════════════════ */
-
-/* Entry form */
 .diary-entry-form{
   background:var(--card);border:1px solid var(--card-border);
   border-radius:18px;padding:16px 16px 14px;
@@ -564,7 +539,6 @@ html,body{
   border-color:rgba(46,204,113,0.3);
 }
 
-/* Guided questions */
 .guided-questions{display:flex;flex-direction:column;gap:10px;}
 .guided-q{display:flex;flex-direction:column;gap:6px;}
 .guided-q-label{font-size:0.72rem;color:var(--text-dim);letter-spacing:0.3px;}
@@ -585,7 +559,6 @@ html,body{
 }
 .guided-q-text:focus{border-color:rgba(46,204,113,0.4);}
 
-/* Manual textarea */
 .manual-area{
   width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
   border-radius:12px;padding:12px 14px;color:white;font-size:0.82rem;
@@ -594,7 +567,6 @@ html,body{
 }
 .manual-area:focus{border-color:rgba(46,204,113,0.4);}
 
-/* Session context badge */
 .session-context{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
   background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.15);
@@ -603,7 +575,6 @@ html,body{
 .session-context-icon{font-size:0.9rem;}
 .session-context-text{font-size:0.68rem;color:rgba(46,204,113,0.8);letter-spacing:0.3px;}
 
-/* Save button */
 .diary-save-btn{
   width:100%;padding:12px 0;border-radius:12px;
   background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.35);
@@ -612,15 +583,23 @@ html,body{
   font-family:'Segoe UI',sans-serif;margin-top:12px;
 }
 @media(hover:hover){.diary-save-btn:hover{background:rgba(46,204,113,0.28);}}
+.diary-form-actions{display:flex;gap:8px;}
+.diary-form-actions .diary-save-btn{width:auto;flex:1;margin-top:0;}
+.diary-cancel-edit-btn{
+  flex:0 0 auto;padding:12px 16px;border-radius:12px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.5);font-size:0.75rem;letter-spacing:1.5px;font-weight:600;
+  cursor:pointer;text-transform:uppercase;transition:background 0.2s;
+  font-family:'Segoe UI',sans-serif;
+}
+@media(hover:hover){.diary-cancel-edit-btn:hover{background:rgba(255,255,255,0.12);}}
 
-/* ── Diary entries — DAY-GROUPED ── */
 .diary-entries{display:flex;flex-direction:column;gap:8px;}
 .diary-empty{
   text-align:center;padding:32px 16px;color:var(--text-faint);
   font-size:0.78rem;line-height:1.8;
 }
 
-/* Day group card */
 .diary-day-card{
   background:var(--card);border:1px solid var(--card-border);
   border-radius:18px;overflow:hidden;
@@ -628,7 +607,6 @@ html,body{
 }
 @media(hover:hover){.diary-day-card:hover{border-color:rgba(255,255,255,0.12);}}
 
-/* Day header — tap to expand */
 .diary-day-header{
   display:flex;justify-content:space-between;align-items:center;
   padding:13px 16px;cursor:pointer;user-select:none;
@@ -651,11 +629,9 @@ html,body{
 }
 .diary-day-card.open .diary-day-chev{transform:rotate(180deg);}
 
-/* Notes list — hidden by default */
 .diary-day-notes{display:none;border-top:1px solid var(--card-border);}
 .diary-day-card.open .diary-day-notes{display:block;}
 
-/* Individual note row */
 .diary-note-row{
   padding:11px 16px;
   border-bottom:1px solid rgba(255,255,255,0.04);
@@ -664,7 +640,6 @@ html,body{
 .diary-note-row:last-child{border-bottom:none;}
 @media(hover:hover){.diary-note-row:hover{background:rgba(255,255,255,0.03);}}
 
-/* Note collapsed preview */
 .diary-note-preview{
   display:flex;justify-content:space-between;align-items:center;gap:10px;
 }
@@ -688,7 +663,6 @@ html,body{
 }
 .diary-note-row.open .diary-note-chev{transform:rotate(180deg);}
 
-/* Note expanded body */
 .diary-note-body{
   display:none;margin-top:10px;padding-top:10px;
   border-top:1px solid rgba(255,255,255,0.05);
@@ -720,19 +694,16 @@ html,body{
 </style>
 </head>
 <body>
-<!-- ── Shared scripts ── -->
 <script src="storage.js"></script>
 
 <div class="app">
 
-  <!-- TOP NAV -->
   <div class="top-nav">
     <a class="nav-back" id="navBackBtn" href="metronomeItem.html" title="Back">←</a>
     <div class="nav-title">My Progress</div>
     <div class="nav-storage-badge" id="storageBadge">0 KB</div>
   </div>
 
-  <!-- TAB BAR -->
   <div class="tab-bar">
     <div class="tab active" data-tab="home">Home</div>
     <div class="tab" data-tab="history">History</div>
@@ -742,19 +713,15 @@ html,body{
     <div class="tab" data-tab="diary">Reflections</div>
   </div>
 
-  <!-- BODY -->
   <div class="body">
 
-    <!-- ══════════════ HOME TAB ══════════════ -->
     <div class="tab-panel active" id="tab-home">
 
-      <!-- User greeting -->
       <div class="card" style="padding:14px 16px;">
         <div style="font-size:18px;font-weight:700;margin-bottom:2px;" id="greetingText">Welcome back 👋</div>
         <div style="font-size:11px;color:var(--text-dim);" id="greetingSub">Keep the rhythm going.</div>
       </div>
 
-      <!-- Quick stats row -->
       <div class="hero-row">
         <div class="hero-stat">
           <div class="hero-stat-val green" id="hsTotalSessions">0</div>
@@ -770,7 +737,6 @@ html,body{
         </div>
       </div>
 
-      <!-- Streak card -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🔥</span>Current Streak</div>
         <div class="streak-hero">
@@ -788,14 +754,12 @@ html,body{
         </div>
       </div>
 
-      <!-- Activity heatmap -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">📅</span>Activity — Last 10 Weeks</div>
         <div class="heatmap-month-labels" id="hmMonthLabels"></div>
         <div class="heatmap" id="heatmap"></div>
       </div>
 
-      <!-- Session duration bar chart -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">📊</span>Session Duration — Last 14 Days</div>
         <div class="bar-chart-wrap">
@@ -803,13 +767,11 @@ html,body{
         </div>
       </div>
 
-      <!-- Cadence trend line chart -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">📈</span>Cadence Trend — Last 20 Sessions</div>
         <div class="line-chart-container" id="lineChartWrap"></div>
       </div>
 
-      <!-- Mode usage donut -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🍩</span>Mode Usage</div>
         <div class="donut-wrap">
@@ -818,7 +780,6 @@ html,body{
         </div>
       </div>
 
-      <!-- Personal Bests -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🏆</span>Personal Bests</div>
         <div class="pb-grid">
@@ -849,9 +810,8 @@ html,body{
         </div>
       </div>
 
-    </div><!-- /home -->
+    </div>
 
-    <!-- ══════════════ HISTORY TAB ══════════════ -->
     <div class="tab-panel" id="tab-history">
       <div class="history-filters">
         <div class="filter-btn active" data-filter="all">All</div>
@@ -862,7 +822,6 @@ html,body{
       <button class="history-load-more" id="loadMoreBtn" style="display:none">LOAD MORE</button>
     </div>
 
-    <!-- ══════════════ ACHIEVEMENTS TAB ══════════════ -->
     <div class="tab-panel" id="tab-achievements">
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🎖</span>Achievement Progress</div>
@@ -874,10 +833,8 @@ html,body{
       </div>
     </div>
 
-    <!-- ══════════════ SETTINGS TAB ══════════════ -->
     <div class="tab-panel" id="tab-settings">
 
-      <!-- Profile -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">👤</span>Profile</div>
         <div class="setting-row">
@@ -903,7 +860,6 @@ html,body{
         </div>
       </div>
 
-      <!-- Athletic defaults -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🏃</span>Athletic Defaults</div>
         <div class="setting-row">
@@ -929,7 +885,6 @@ html,body{
         </div>
       </div>
 
-      <!-- Music defaults -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🎵</span>Music Defaults</div>
         <div class="setting-row">
@@ -965,7 +920,6 @@ html,body{
         </div>
       </div>
 
-      <!-- Data management -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">💾</span>Data Management</div>
         <button class="data-btn export" id="exportBtn">⬇ Export Backup (JSON)</button>
@@ -984,7 +938,6 @@ html,body{
         <button class="data-btn danger" id="clearAllBtn">⚠ Factory Reset (Clear All Data)</button>
       </div>
 
-      <!-- Onboarding Tour -->
       <div class="card">
         <div class="card-title"><span class="card-title-icon">🎯</span>Onboarding Tour</div>
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">
@@ -996,29 +949,25 @@ html,body{
 
 
 
-    </div><!-- /settings -->
+    </div>
 
-    <!-- ════════════════════════ REFLECTIONS TAB ════════════════════════ -->
     <div class="tab-panel" id="tab-diary">
 
       <div style="text-align:center;margin-bottom:14px;">
         <div style="font-size:1rem;font-weight:700;color:white;letter-spacing:-0.3px;">Reflections</div>
         <div style="font-size:0.65rem;color:var(--text-faint);letter-spacing:1px;margin-top:3px;">YOUR PERSONAL JOURNAL</div>
       </div>
-      <!-- New entry form -->
       <div class="diary-entry-form card">
         <div class="diary-form-tabs">
           <div class="diary-form-tab active" data-form="guided" id="dTabGuided">✦ Guided</div>
           <div class="diary-form-tab" data-form="manual" id="dTabManual">✎ Manual</div>
         </div>
 
-        <!-- Session context (shown when arriving from ?diary=1) -->
         <div class="session-context" id="sessionContext" style="display:none">
           <span class="session-context-icon">🎵</span>
           <span class="session-context-text" id="sessionContextText">Session: —</span>
         </div>
 
-        <!-- Guided form -->
         <div id="guidedForm">
           <div class="guided-questions">
             <div class="guided-q">
@@ -1046,7 +995,6 @@ html,body{
                 placeholder="What will you focus on next time? Any specific targets?"></textarea>
             </div>
 
-            <!-- Optional mood emoji — secondary, at the bottom -->
             <div class="guided-q">
               <div class="guided-q-label">Overall mood <span style="color:var(--text-faint);font-size:0.62rem">(optional)</span></div>
               <div class="guided-q-emojis" data-q="mood">
@@ -1060,31 +1008,28 @@ html,body{
           </div>
         </div>
 
-        <!-- Manual form -->
         <div id="manualForm" style="display:none">
           <textarea class="manual-area" id="manualText" placeholder="Write whatever's on your mind…"></textarea>
         </div>
 
-        <button class="diary-save-btn" id="diarySaveBtn">Save Entry</button>
+        <div class="diary-form-actions">
+          <button class="diary-save-btn" id="diarySaveBtn">Save Entry</button>
+          <button class="diary-cancel-edit-btn" id="diaryCancelEditBtn" onclick="cancelDiaryEdit()" style="display:none">Cancel</button>
+        </div>
       </div>
 
-      <!-- Past entries -->
       <div class="diary-entries" id="diaryEntriesList">
         <div class="diary-empty">No entries yet.<br>Complete a session and write your first one ✍️</div>
       </div>
 
-    </div><!-- /tab-diary -->
+    </div>
 
-  </div><!-- /body -->
-</div><!-- /app -->
+  </div>
+</div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-//  HELPERS
-// ═══════════════════════════════════════════════════════════
 function fmtMS(s){const m=~~(s/60),ss=~~(s%60);return`${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;}
 function fmtHMS(s){const h=~~(s/3600),m=~~((s%3600)/60),ss=~~(s%60);return`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;}
 function fmtDate(iso){
@@ -1124,9 +1069,6 @@ const DONUT_COLORS=[
   "#34d399","#c084fc","#fbbf24","#60a5fa","#f472b6"
 ];
 
-// ═══════════════════════════════════════════════════════════
-//  TABS
-// ═══════════════════════════════════════════════════════════
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -1143,10 +1085,6 @@ document.querySelectorAll(".tab").forEach(tab=>{
   });
 });
 
-// ═══════════════════════════════════════════════════════
-//  DIARY MODULE — Day-grouped architecture
-//  Entries stored flat. Rendered as Day cards → Note rows.
-// ═══════════════════════════════════════════════════════
 (function DiaryModule(){
 
   const STORE_KEY = "musicElete_diary";
@@ -1154,6 +1092,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
   let _formMode = "guided";
   let _moods    = {};
   let _sessionCtx = null;
+  let _editingIndex = null;
 
   function loadEntries(){
     try{ const r=localStorage.getItem(STORE_KEY); _entries=r?JSON.parse(r):[]; }
@@ -1226,6 +1165,10 @@ document.querySelectorAll(".tab").forEach(tab=>{
     ["guidedMood","guidedGoal","guidedPlan","manualText"].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value="";
     });
+    [["moodCount"],["goalCount"],["planCount"]].forEach(([cid])=>{
+      const ct=document.getElementById(cid); if(ct) ct.textContent="0/180";
+    });
+    if(_editingIndex===null) _setSaveButtonEditMode(false);
   }
 
   function renderEntries(){
@@ -1263,12 +1206,13 @@ document.querySelectorAll(".tab").forEach(tab=>{
               <span class="diary-note-mood">${note.mood||"📝"}</span>
               <span class="diary-note-snippet">${noteSnippet(note)}</span>
             </div>
-            <span class="diary-note-time">${fmtTime(note.ts)}</span>
+            <span class="diary-note-time">${fmtTime(note.ts)}${note.edited_at?' · edited':''}</span>
             <span class="diary-note-chev">▼</span>
           </div>
           <div class="diary-note-body">
             ${strip}${body}
             <div class="diary-note-actions">
+              <button class="diary-action-btn" onclick="event.stopPropagation();editDiaryEntry(${gi})">✏️ Edit</button>
               <button class="diary-action-btn del" onclick="event.stopPropagation();deleteDiaryEntry(${gi})">🗑 Delete</button>
             </div>
           </div>
@@ -1290,7 +1234,11 @@ document.querySelectorAll(".tab").forEach(tab=>{
   }
 
   function saveEntry(){
-    const entry={ts:Date.now(),type:_formMode,session:_sessionCtx||null};
+    const isEditing = _editingIndex !== null;
+    const entry = isEditing
+      ? { ts:_entries[_editingIndex].ts, type:_formMode, session:_entries[_editingIndex].session }
+      : { ts:Date.now(), type:_formMode, session:_sessionCtx||null };
+
     if(_formMode==="guided"){
       const feeling=document.getElementById("guidedMood")?.value.trim();
       const goal   =document.getElementById("guidedGoal")?.value.trim();
@@ -1303,10 +1251,67 @@ document.querySelectorAll(".tab").forEach(tab=>{
       if(!text){ showToast("Write something first ✍️"); return; }
       entry.text=text;
     }
-    _entries.unshift(entry);
+
+    if(isEditing){
+      entry.edited_at = Date.now();
+      _entries[_editingIndex] = entry;
+      _editingIndex = null;
+    } else {
+      _entries.unshift(entry);
+    }
+
     saveEntries(); _sessionCtx=null;
     renderForm(); renderEntries();
-    showToast("Entry saved 📖");
+    showToast(isEditing ? "Entry updated ✍️" : "Entry saved 📖");
+  }
+
+  window.editDiaryEntry = (gi)=>{
+    const entry = _entries[gi];
+    if(!entry) return;
+    _editingIndex = gi;
+
+    _formMode = entry.type === "manual" ? "manual" : "guided";
+    document.querySelectorAll(".diary-form-tab").forEach(t=>{
+      t.classList.toggle("active", t.dataset.form===_formMode);
+    });
+    document.getElementById("guidedForm").style.display = _formMode==="guided" ? "" : "none";
+    document.getElementById("manualForm").style.display = _formMode==="manual" ? "" : "none";
+
+    if(_formMode==="guided"){
+      document.getElementById("guidedMood").value = entry.feeling || "";
+      document.getElementById("guidedGoal").value = entry.goal    || "";
+      document.getElementById("guidedPlan").value  = entry.plan   || "";
+      [["guidedMood","moodCount"],["guidedGoal","goalCount"],["guidedPlan","planCount"]].forEach(([id,cid])=>{
+        const el=document.getElementById(id), ct=document.getElementById(cid);
+        if(el&&ct) ct.textContent=el.value.length+"/180";
+      });
+      _moods = entry.mood ? { mood: entry.mood } : {};
+      document.querySelectorAll(".emoji-btn").forEach(b=>{
+        b.classList.toggle("selected", b.dataset.val === entry.mood);
+      });
+    } else {
+      document.getElementById("manualText").value = entry.text || "";
+    }
+
+    const ctx = document.getElementById("sessionContext");
+    if(ctx) ctx.style.display = "none";
+
+    _setSaveButtonEditMode(true);
+
+    document.querySelector(".diary-entry-form")?.scrollIntoView({behavior:"smooth", block:"start"});
+  };
+
+  window.cancelDiaryEdit = ()=>{
+    _editingIndex = null;
+    renderForm();
+    _setSaveButtonEditMode(false);
+  };
+
+  function _setSaveButtonEditMode(isEditing){
+    const saveBtn = document.getElementById("diarySaveBtn");
+    const cancelBtn = document.getElementById("diaryCancelEditBtn");
+    if(saveBtn) saveBtn.textContent = isEditing ? "Update Entry" : "Save Entry";
+    if(cancelBtn) cancelBtn.style.display = isEditing ? "" : "none";
   }
 
   window.toggleDiaryDay  = (di)=>{ const c=document.getElementById("dDay"+di); if(c) c.classList.toggle("open"); };
@@ -1337,7 +1342,6 @@ document.querySelectorAll(".tab").forEach(tab=>{
   const saveBtn=document.getElementById("diarySaveBtn");
   if(saveBtn) saveBtn.addEventListener("click",saveEntry);
 
-  // Character counters for guided textareas
   [["guidedMood","moodCount"],["guidedGoal","goalCount"],["guidedPlan","planCount"]].forEach(([id,cid])=>{
     const el=document.getElementById(id);
     const ct=document.getElementById(cid);
@@ -1350,15 +1354,11 @@ document.querySelectorAll(".tab").forEach(tab=>{
 
 })();
 
-// ═══════════════════════════════════════════════════════════
-//  HOME TAB
-// ═══════════════════════════════════════════════════════════
 function renderHome(){
   const ov = MetStorage.getOverview();
   const s  = MetStorage.getStreaks();
   const pb = MetStorage.getPersonalBests();
 
-  // Greeting
   const name = ov.user_name;
   const hour = new Date().getHours();
   const greet = hour<12 ? "Good morning" : hour<17 ? "Good afternoon" : "Good evening";
@@ -1369,14 +1369,12 @@ function renderHome(){
       ? `${ov.total_sessions} session${ov.total_sessions!==1?"s":""} · ${ov.total_practice_time} total · Most used: ${ov.most_used_mode}`
       : "Complete your first session to see your stats.";
 
-  // Quick stats
   document.getElementById("hsTotalSessions").textContent = ov.total_sessions;
   document.getElementById("hsStreak").textContent = ov.streak_alive ? ov.current_streak : 0;
   const hours = Math.floor(s.total_practice_minutes/60);
   const mins  = s.total_practice_minutes%60;
   document.getElementById("hsTotalHours").textContent = hours>0 ? `${hours}h` : `${mins}m`;
 
-  // Streak card
   const streak = ov.streak_alive ? ov.current_streak : 0;
   document.getElementById("streakNum").textContent  = streak;
   document.getElementById("streakBest").textContent = ov.longest_streak;
@@ -1386,7 +1384,6 @@ function renderHome(){
   document.getElementById("streakDeadBadge").style.display =
     (s.last_session_date && !ov.streak_alive && ov.longest_streak > 0) ? "inline-block" : "none";
 
-  // Personal bests
   document.getElementById("pbLongest").textContent = pb.longest_session_minutes > 0 ? pb.longest_session_minutes.toFixed(1) : "—";
   document.getElementById("pbHighCad").textContent = pb.highest_cadence_ever || "—";
   document.getElementById("pbCad1min").textContent = pb.highest_cadence_1min || "—";
@@ -1401,26 +1398,30 @@ function renderHome(){
   updateStorageBadge();
 }
 
-// ── HEATMAP ──────────────────────────────────────────────
 function renderHeatmap(){
-  const actMap = MetStorage.getActivityMap(70);  // 10 weeks = 70 days
+  const actMap = MetStorage.getActivityMap(70);
   const hm     = document.getElementById("heatmap");
   const mlEl   = document.getElementById("hmMonthLabels");
   hm.innerHTML = ""; mlEl.innerHTML = "";
 
-  // Build 7 rows (Mon–Sun), each with 10 cells (10 weeks)
   const today = new Date();
-  // Start from 69 days ago → pad to start of week
+  today.setHours(0,0,0,0);
+
+  const earliestNeeded = new Date(today);
+  earliestNeeded.setDate(today.getDate() - 69);
+  const gridStart = new Date(earliestNeeded);
+  gridStart.setDate(earliestNeeded.getDate() - earliestNeeded.getDay());
+
+  const gridEnd = new Date(today);
+  gridEnd.setDate(today.getDate() + (6 - today.getDay()));
+
   const days=[];
-  for(let i=69;i>=0;i--){
-    const d=new Date(today);d.setDate(today.getDate()-i);
-    days.push(d);
+  for(let d=new Date(gridStart); d<=gridEnd; d.setDate(d.getDate()+1)){
+    days.push(new Date(d));
   }
-  // Group into weeks (columns)
   const weeks=[];
   for(let i=0;i<days.length;i+=7) weeks.push(days.slice(i,i+7));
 
-  // Day label rows
   const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   for(let row=0;row<7;row++){
     const rowEl=document.createElement("div");
@@ -1435,7 +1436,7 @@ function renderHeatmap(){
       const d=week[row];
       const cell=document.createElement("div");
       cell.className="heatmap-cell";
-      if(d){
+      if(d && d<=today){
         const ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
         const cnt=actMap[ds]||0;
         if(cnt===1) cell.classList.add("l1");
@@ -1450,7 +1451,6 @@ function renderHeatmap(){
     hm.appendChild(rowEl);
   }
 
-  // Month labels above heatmap
   const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const labelEl=document.createElement("div");
   labelEl.style.cssText="display:flex;gap:3px;padding-left:25px;margin-bottom:2px;";
@@ -1458,7 +1458,6 @@ function renderHeatmap(){
     const d=week[0];
     const sp=document.createElement("div");
     sp.style.cssText="width:11px;font-size:7px;color:var(--text-faint);text-align:center;flex-shrink:0;overflow:visible;white-space:nowrap;";
-    // Show month label on first week of each month
     if(d && (wi===0 || d.getDate()<=7)){
       sp.textContent=monthNames[d.getMonth()];
     }
@@ -1467,7 +1466,6 @@ function renderHeatmap(){
   mlEl.replaceWith(labelEl);
 }
 
-// ── BAR CHART (14 days duration) ─────────────────────────
 function renderBarChart(){
   const data=MetStorage.getDailyDurations(14);
   const wrap=document.getElementById("barChart").parentElement;
@@ -1482,8 +1480,6 @@ function renderBarChart(){
   const CHART_H = 72;
   const dayLabels=["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-  // Round the max up to a clean number so scale labels are meaningful.
-  // Steps: use 5m increments up to 60m, then 15m increments above that.
   function niceMax(v){
     if(v<=5)  return 5;
     if(v<=60) return Math.ceil(v/5)*5;
@@ -1491,12 +1487,9 @@ function renderBarChart(){
   }
   const yMax = niceMax(rawMax);
 
-  // Build 5 evenly-spaced round labels (top → 0) so the scale is readable
-  const steps = 4; // gives labels at 100%, 75%, 50%, 25%, 0%
+  const steps = 4;
   const scaleEl = wrap.querySelector(".bar-y-scale") || document.createElement("div");
   scaleEl.className="bar-y-scale";
-  // CSS already does space-between across the element height;
-  // 5 spans = top label, 3 intermediates, bottom "0"
   scaleEl.innerHTML = Array.from({length:steps+1},(_,i)=>{
     const val = Math.round(yMax * (steps-i) / steps);
     return `<span>${val>0?val+"m":"0"}</span>`;
@@ -1508,8 +1501,6 @@ function renderBarChart(){
     col.className="bar-col";
     const bar=document.createElement("div");
     bar.className="bar";
-    // Minimum visible height of 3px for any session that happened,
-    // so even a 1-minute session shows as a real bar (not a flat line).
     const px = d.duration_min > 0
       ? Math.max(3, Math.round((d.duration_min / yMax) * CHART_H))
       : 0;
@@ -1524,7 +1515,6 @@ function renderBarChart(){
   });
 }
 
-// ── LINE CHART (cadence trend) ────────────────────────────
 function renderLineChart(){
   const data=MetStorage.getCadenceTrend(20);
   const wrap=document.getElementById("lineChartWrap");
@@ -1538,10 +1528,7 @@ function renderLineChart(){
     if(W < 10){ requestAnimationFrame(_draw); return; }
     const H = 90;
 
-    // Left margin reserves space for Y-axis labels so they never
-    // sit on top of the plotted data — this is the main fix for
-    // the "105 SPM overlapping the line" issue seen in the screenshot.
-    const LEFT   = 42;   // px reserved for Y-axis labels
+    const LEFT   = 42;
     const RIGHT  = 6;
     const TOP    = 10;
     const BOTTOM = 10;
@@ -1553,8 +1540,6 @@ function renderLineChart(){
     const rawMin = Math.min(...vals);
     const rawMax = Math.max(...vals);
 
-    // Round min/max to clean 10-SPM boundaries so labels are meaningful.
-    // Add padding so no data point touches the very top or bottom edge.
     function niceFloor(v){ return Math.floor(v/10)*10; }
     function niceCeil(v) { return Math.ceil(v/10)*10;  }
     const yMin = rawMin === rawMax
@@ -1565,7 +1550,6 @@ function renderLineChart(){
       : niceCeil(rawMax) + 10;
     const yRange = yMax - yMin;
 
-    // Map data → SVG coords, fully within the plot area
     const px = i  => (LEFT + (i/(data.length-1)) * plotW).toFixed(1);
     const py = v  => (TOP  + (1 - (v - yMin)/yRange) * plotH).toFixed(1);
 
@@ -1574,15 +1558,13 @@ function renderLineChart(){
     svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
     svg.setAttribute("preserveAspectRatio","none");
 
-    // Subtle horizontal grid lines at 4 evenly-spaced values
     const labelStyle = "font-size:8px;fill:rgba(255,255,255,0.35);font-family:'Segoe UI',sans-serif;";
-    const gridCount  = 4;  // 0%, 33%, 66%, 100%
+    const gridCount  = 4;
     for(let i=0; i<=gridCount; i++){
       const frac = i / gridCount;
       const gVal = Math.round(yMin + frac * yRange);
       const gy   = (TOP + (1-frac) * plotH).toFixed(1);
 
-      // Grid line — only inside the plot area (starts at LEFT)
       const gl = document.createElementNS("http://www.w3.org/2000/svg","line");
       gl.setAttribute("x1", LEFT); gl.setAttribute("x2", W - RIGHT);
       gl.setAttribute("y1", gy);   gl.setAttribute("y2", gy);
@@ -1590,9 +1572,7 @@ function renderLineChart(){
       gl.setAttribute("stroke-width","1");
       svg.appendChild(gl);
 
-      // Y-axis label — sits in the left margin, vertically centred on grid line
       const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
-      // Anchor to the right edge of the left margin so labels align neatly
       lbl.setAttribute("x", (LEFT - 4).toString());
       lbl.setAttribute("y", (parseFloat(gy) + 3).toFixed(1));
       lbl.setAttribute("text-anchor","end");
@@ -1601,21 +1581,18 @@ function renderLineChart(){
       svg.appendChild(lbl);
     }
 
-    // Area fill
     const points = data.map((d,i)=>`${px(i)},${py(d.avg_cadence)}`).join(" ");
     const area   = document.createElementNS("http://www.w3.org/2000/svg","polygon");
     area.setAttribute("points",`${px(0)},${(TOP+plotH).toFixed(1)} ${points} ${px(data.length-1)},${(TOP+plotH).toFixed(1)}`);
     area.setAttribute("fill","rgba(46,204,113,0.08)");
     svg.appendChild(area);
 
-    // Line
     const line = document.createElementNS("http://www.w3.org/2000/svg","polyline");
     line.setAttribute("points", points);
     line.setAttribute("fill","none"); line.setAttribute("stroke","#2ecc71");
     line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linejoin","round");
     svg.appendChild(line);
 
-    // Dots with tooltips
     data.forEach((d,i)=>{
       const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
       c.setAttribute("cx", px(i)); c.setAttribute("cy", py(d.avg_cadence)); c.setAttribute("r","3");
@@ -1630,7 +1607,6 @@ function renderLineChart(){
   requestAnimationFrame(()=>requestAnimationFrame(_draw));
 }
 
-// ── DONUT CHART (mode usage) ──────────────────────────────
 function renderDonut(){
   const data=MetStorage.getModeUsage().slice(0,6);
   const svg=document.getElementById("donutSvg");
@@ -1658,7 +1634,6 @@ function renderDonut(){
     t.textContent=`${d.label}: ${d.count}`;
     path.appendChild(t); svg.appendChild(path);
     startAngle=endAngle;
-    // Legend
     const li=document.createElement("div"); li.className="donut-legend-item";
     li.innerHTML=`<div class="donut-dot" style="background:${DONUT_COLORS[i%DONUT_COLORS.length]}"></div><div class="donut-lbl">${d.label}</div><div class="donut-cnt">${d.count}</div>`;
     legend.appendChild(li);
@@ -1670,9 +1645,6 @@ function updateStorageBadge(){
   document.getElementById("storageBadge").textContent=kb+" KB";
 }
 
-// ═══════════════════════════════════════════════════════════
-//  HISTORY TAB
-// ═══════════════════════════════════════════════════════════
 let histFilter="all", histPage=0, HIST_PER_PAGE=20;
 
 document.querySelectorAll(".filter-btn").forEach(btn=>{
@@ -1737,12 +1709,11 @@ function renderHistory(append=false){
         ${renderSetsMini(s)}
         <div style="margin-top:10px;">
           <textarea class="session-note" placeholder="Add a note…" rows="2" data-sid="${s.session_id}">${s.user_notes||""}</textarea>
+        </div>
+        <div class="session-note-actions">
+          <button class="session-delete-btn" onclick="deleteSession('${s.session_id}',this)">🗑 Delete Session</button>
           <button class="note-save-btn" onclick="saveNote('${s.session_id}',this)">SAVE NOTE</button>
         </div>
-        <div style="margin-top:8px;text-align:right;">
-          <button class="session-delete-btn" onclick="deleteSession('${s.session_id}',this)">🗑 Delete Session</button>
-        </div>
-        <div style="clear:both;height:4px;"></div>
       </div>`;
     list.appendChild(card);
   });
@@ -1768,7 +1739,6 @@ function renderSetsMini(s){
 function deleteSession(sid, btn){
   if(!confirm("Delete this session? This cannot be undone.")) return;
   MetStorage.deleteSession(sid);
-  // Remove card from DOM
   const card = btn.closest(".session-card");
   card.style.transition = "opacity 0.3s";
   card.style.opacity = "0";
@@ -1784,14 +1754,16 @@ function toggleSessionCard(hdr){
 }
 
 function saveNote(sid,btn){
-  const ta=btn.previousElementSibling;
+  // FIX: Save Note now lives in .session-note-actions, a separate row
+  // from the textarea (previously it sat directly next to it, so
+  // previousElementSibling worked). Find the textarea via the shared
+  // .session-body ancestor instead, so this keeps working after the
+  // layout fix above.
+  const ta=btn.closest(".session-body").querySelector(".session-note");
   MetStorage.updateSessionNotes(sid, ta.value);
   showToast("Note saved ✓");
 }
 
-// ═══════════════════════════════════════════════════════════
-//  ACHIEVEMENTS TAB
-// ═══════════════════════════════════════════════════════════
 function renderAchievements(){
   const all=MetStorage.getAchievements();
   const prog=MetStorage.getAchievementProgress();
@@ -1811,9 +1783,6 @@ function renderAchievements(){
   });
 }
 
-// ═══════════════════════════════════════════════════════════
-//  SETTINGS TAB
-// ═══════════════════════════════════════════════════════════
 function loadSettings(){
   const s=MetStorage.getSettings();
   const uname=MetStorage.getUserName();
@@ -1826,14 +1795,12 @@ function loadSettings(){
   document.getElementById("setVolume").value=Math.round(s.volume_level*100);
   document.getElementById("toggleFlex").classList.toggle("on",s.flexible_mode_default);
   document.getElementById("toggleVoice").classList.toggle("on",s.voice_announcements!==false);
-  // Storage bar
   const kb=MetStorage.getStorageUsageKB();
   const maxKB=5120;
   document.getElementById("storageText").textContent=`${kb} KB / ~5 MB`;
   document.getElementById("storageBarFill").style.width=Math.min(100,(kb/maxKB)*100)+"%";
 }
 
-// Auto-save settings on input change
 ["setAthCadence","setMusBpm","setInstrument","setVolume","setDefaultMode"].forEach(id=>{
   document.getElementById(id)?.addEventListener("change",()=>saveSettings());
 });
@@ -1867,16 +1834,14 @@ document.getElementById("saveNameBtn").addEventListener("click",()=>{
   if(!n){showToast("Please enter a name");return;}
   MetStorage.setUserName(n);
   showToast("Name saved ✓");
-  renderHome(); // refresh greeting
+  renderHome();
 });
 
-// Export
 document.getElementById("exportBtn").addEventListener("click",()=>{
   MetStorage.exportData();
   showToast("Backup exported ✓");
 });
 
-// Import
 document.getElementById("importBtn").addEventListener("click",()=>{
   document.getElementById("importFile").click();
 });
@@ -1889,7 +1854,6 @@ document.getElementById("importFile").addEventListener("change",async(e)=>{
   e.target.value="";
 });
 
-// Clear history
 document.getElementById("clearHistoryBtn").addEventListener("click",()=>{
   if(!confirm("Clear all session history? Achievements and streaks will be kept.")) return;
   MetStorage.clearHistory();
@@ -1897,7 +1861,6 @@ document.getElementById("clearHistoryBtn").addEventListener("click",()=>{
   renderHistory();
 });
 
-// Factory reset
 document.getElementById("clearAllBtn").addEventListener("click",()=>{
   if(!confirm("⚠ This will delete ALL your data including streaks and achievements. Are you sure?")) return;
   if(!confirm("Last warning — this cannot be undone. Continue?")) return;
@@ -1906,11 +1869,6 @@ document.getElementById("clearAllBtn").addEventListener("click",()=>{
   renderHome(); loadSettings(); renderHistory(); renderAchievements();
 });
 
-// ═══════════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════════
-
-// Fix #3: Smart back button — reads ?from= URL param
 (function(){
   const params = new URLSearchParams(window.location.search);
   const from   = params.get("from");
@@ -1928,10 +1886,8 @@ document.getElementById("clearAllBtn").addEventListener("click",()=>{
   }
 })();
 
-// Initial render after layout — double rAF ensures real offsetWidth for line chart
 requestAnimationFrame(()=>requestAnimationFrame(()=>{ renderHome(); }));
 
-// Fix #4: Replay tour buttons
 document.getElementById("replayTourAthBtn")?.addEventListener("click", () => {
   window.location.href = "athleticMetronome.html?replayTour=1";
 });
@@ -1939,15 +1895,12 @@ document.getElementById("replayTourMusBtn")?.addEventListener("click", () => {
   window.location.href = "musicMetronome.html?replayTour=1";
 });
 
-// Re-render line chart on resize (e.g. phone rotation)
 window.addEventListener("resize", ()=>{
   const homePanel = document.getElementById("tab-home");
   if(homePanel && homePanel.classList.contains("active")){
     requestAnimationFrame(()=>requestAnimationFrame(renderLineChart));
   }
 });
-
-// Voice control deferred to Phase 2.
 </script>
 </body>
 </html>

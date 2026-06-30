@@ -405,7 +405,7 @@ body::before{content:"";position:fixed;width:500px;height:500px;border-radius:50
             </svg>
             <div class="rest-inner">
               <span class="rest-lbl">REST</span>
-              <span class="rest-cnt" id="restCnt">30</span>
+              <span class="rest-cnt" id="restCnt" onclick="_diagShowAndClear()" title="Tap to view diagnostic log">30</span>
             </div>
             <div class="rest-plus" id="restPlus">+10 SEC</div>
           </div>
@@ -466,9 +466,53 @@ let totalSteps=0,_totalStepsOffset=0,sessionSec=0,setElapsed=0,setStartTime=0;
 let plannedSets=[],currentSetIdx=0,sessionData={mode:"regular",sets:[]},currentSetData=null,currentPhase=null;
 let sessionClockID=null,setDurTimerID=null,restIntervalID=null,rampIntervalID=null;
 let restRemaining=0,restTotal=0;
+// ── Screen-off-safe timing state (see startClock/beginRest fix notes
+// further down for the full explanation). Declared together here,
+// alongside the rest of the session state, rather than scattered near
+// their first use. ──
+let _sessionStartTs=0, _sessionPausedAccum=0, _sessionPauseStartedAt=0;
+let _restStartTs=0, _restPausedAccum=0, _restPauseStartedAt=0;
 let sessionStartBPM=140,setsSkippedCount=0,storedConfig={};
 
 const $=id=>document.getElementById(id);
+
+// ── Background keep-alive: an Android foreground service (keeps the
+// process alive + shows a persistent notification) plus a partial
+// wake lock (keeps the CPU executing so JS timers actually fire) while
+// a session is running. Both no-op outside the native Android shell
+// (e.g. browser preview) where the plugins aren't registered.
+function _fgService(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.ForegroundService;}
+function _wakeLock(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.BeatStrideWakeLock;}
+function startBgKeepAlive(){
+  const fg=_fgService();
+  if(fg)fg.startForegroundService({
+    id:1,
+    title:"BeatStride",
+    body:"Workout in progress",
+    smallIcon:"ic_launcher_foreground",
+    silent:true,
+    notificationChannelId:"default",
+  }).catch(()=>{});
+  const wl=_wakeLock();if(wl)wl.acquire().catch(()=>{});
+}
+function stopBgKeepAlive(){
+  const fg=_fgService();if(fg)fg.stopForegroundService().catch(()=>{});
+  const wl=_wakeLock();if(wl)wl.release().catch(()=>{});
+}
+
+// ── FIX: read saved default cadence from Settings ───────────────
+// Previously `cadence` was always hardcoded to 140 regardless of
+// what the user set under Settings → Athletic Defaults → Default
+// Cadence. dashboard.html correctly WRITES that preference via
+// MetStorage.updateSettings(), but nothing ever READ it back here.
+// This reads it once at page load, before any UI renders — falls
+// back to 140 if storage.js isn't loaded yet or no setting has
+// been saved, so behavior for anyone who's never touched Settings
+// is completely unchanged.
+if(typeof MetStorage!=="undefined"){
+  cadence = MetStorage.getSettings().default_cadence_athletic || 140;
+}
+
 // Parse duration — accepts:
 //   plain seconds:  15       → 15s  (quick sprint)
 //   mm:ss:         0:15      → 15s
@@ -525,7 +569,26 @@ function updateInfo(){
   else{$("iL1").textContent="SET "+(currentSetIdx+1)+"/"+plannedSets.length+" | ACTIVE";$("iL2").textContent="CADENCE: "+cadence+" SPM";$("iL3").textContent="DUR: "+fmtHMS(s.duration)+"  REST: "+fmtHMS(s.rest);}
 }
 
-function startClock(){sessionClockID=setInterval(()=>{if(!isPaused){sessionSec++;$("durVal").textContent=fmtHMS(sessionSec);}},1000);}
+// ── FIX: session clock now uses a real timestamp anchor ──────────
+// Previously: sessionSec++ on every fired tick, so screen-off
+// throttling (the OS slows/coalesces background setInterval ticks
+// to save battery) caused the displayed duration to silently fall
+// behind real elapsed time, same root cause as the rest-timer bug
+// described below. Anchoring to Date.now() means the very next time
+// a (possibly delayed) tick fires, it immediately recalculates the
+// TRUE elapsed time rather than trusting how many ticks happened to
+// fire — so it can never drift, no matter how throttled the timer is.
+// (_sessionStartTs and _sessionPausedAccum are declared once, near
+// the top of the file alongside the rest of the session state.)
+function startClock(){
+  _sessionStartTs = Date.now();
+  sessionClockID=setInterval(()=>{
+    if(isPaused) return;
+    const elapsedMs = (Date.now() - _sessionStartTs) - _sessionPausedAccum;
+    sessionSec = Math.floor(elapsedMs/1000);
+    $("durVal").textContent=fmtHMS(sessionSec);
+  },1000);
+}
 function stopClock(){clearInterval(sessionClockID);}
 
 // Track ramp phases for summary
@@ -618,16 +681,229 @@ function onActiveEnd(idx){
   if(s.rest>0)beginRest(s.rest,idx);else{finaliseSet();beginSet(idx+1);}
 }
 
+// ── FIX: rest timer now uses a real timestamp anchor, not a tick counter ──
+// THE BUG: previously `restRemaining--` decremented once PER FIRED TICK,
+// not once per real elapsed second. When the phone screen turns off,
+// Android (and iOS) throttle background setInterval callbacks heavily to
+// save battery — a 1000ms interval might only actually fire every several
+// seconds, or even less often, while the screen is off. So after a full
+// real minute of rest, only ~30-40 ticks might have fired, leaving
+// restRemaining stuck around "20-26s to go" even though a full minute
+// had genuinely passed — exactly the symptom reported (rest always
+// seemed to have ~26s left whenever the phone was reopened).
+//
+// THE FIX: anchor to Date.now() at rest start, and on every tick
+// (however delayed it actually was) compute the TRUE elapsed real time
+// and derive restRemaining from that — never from a decrement count.
+// The very next time a delayed tick fires, it immediately jumps to the
+// correct remaining value instead of slowly catching up tick-by-tick.
+// Pausing during rest is handled by accumulating paused duration
+// (_restPausedAccum) so paused time is correctly excluded from the
+// elapsed-time calculation — mirrors the existing setElapsed/setStartTime
+// pattern already used for the active-phase pause/resume logic.
+// (_restStartTs and _restPausedAccum are declared once, near the top
+// of the file alongside the rest of the session state.)
+// ── FIX ROUND 2: rest-end transition now driven by the audio clock ──────
+// THE REMAINING BUG: Round 1 fixed the rest countdown's DISPLAY math
+// (Date.now()-anchored, so it never drifts), but the actual TRANSITION
+// to the next set — onRestEnd() — still fired from the SAME plain
+// setInterval. Confirmed on a real device: even with the screen-off
+// foreground service installed and running (audio keeps playing
+// continuously through the active phase, proving the process itself
+// stays alive), rest periods still never auto-completed — the next
+// set only began once the phone was physically reopened, even after
+// 3+ minutes had passed. This proves the foreground service solves
+// process survival, but Android's WebView JS-timer throttling during
+// screen-off idle is a SEPARATE mechanism that a kept-alive process
+// does not bypass — a plain setInterval callback can still be deferred
+// indefinitely regardless of whether the process is alive.
+//
+// THE FIX: drive the actual rest→next-set transition off
+// MetEngine.startTimed() — the exact same audio-clock-based API
+// already proven to survive screen-off correctly for the ACTIVE phase
+// (beginSet() uses this same call). The engine is fully free to reuse
+// here: onActiveEnd() always calls MetEngine.stop() immediately before
+// calling beginRest(), so there's no conflict reusing it for rest.
+//
+// To keep this SILENT (rest should never audibly click), volume is set
+// to 0 for the duration of the rest-timing session, then explicitly
+// restored to 0.75 inside beginSet() when the next active set begins
+// (beginSet() previously never touched volume at all — see the fix
+// note there for why that changed).
+// Setting volume to 0 does NOT stop the scheduler or affect timing in
+// any way — it only silences the already-scheduled clicks at the
+// output stage (see metronome-engine.js: setVolume() only touches
+// _masterGain.gain, the scheduler/lookahead loop and _globalBeatIdx
+// are completely unaffected). This is the cleanest way to get
+// screen-off-safe scheduling without making any audible sound or
+// requiring any change to metronome-engine.js itself.
+//
+// The Date.now()-anchored DISPLAY countdown (restCnt text, restRing
+// stroke-dashoffset) is UNCHANGED from Round 1 — it's still correct,
+// and it only needs to update while the screen is actually on and
+// visible, so it's fine if its setInterval gets throttled/skipped
+// while the screen is off. The only thing that ever depended on that
+// same interval firing reliably was the actual transition logic, and
+// that's what's been moved off of it.
+//
+// Pause/resume during rest now mirrors the EXACT pattern already used
+// for the active phase's pause/resume (see pauseBtn handler): pausing
+// calls MetEngine.pause() + MetEngine.clearDuration() (cancelling the
+// pending end-callback), and resuming calls MetEngine.resume() then
+// MetEngine.setDurationFromNow(remainingRestSec, onRestEnd) to re-arm
+// the end-callback for whatever rest time is actually left.
+// ── FIX ROUND 3: trigger the rest-end transition from the SAME timer
+// already proven reliable on a real device, not from MetEngine ──
+// ROUND 2 RECAP: drove the rest→next-set transition off
+// MetEngine.startTimed(), reasoning that its audio-clock anchoring
+// would survive screen-off the same way the active phase does.
+// REAL-DEVICE TESTING DISPROVED THIS. Precise observations: the rest
+// countdown DISPLAY (Date.now()-anchored, this same setInterval) stayed
+// accurate the whole time, screen off, unopened (confirmed at 45s-in
+// showing ~7-8s left, twice). But the actual transition — which Round 2
+// moved onto MetEngine's internal 25ms recursive setTimeout scheduler
+// loop — froze completely after roughly 30 seconds in the background,
+// every time, only catching up the INSTANT the phone was reopened.
+// Meanwhile the session-level clock (sessionSec, a plain 1-second
+// setInterval — the exact same mechanism as this rest countdown) was
+// independently confirmed correct the entire time, in every test,
+// including tests where the rest transition never fired at all.
+//
+// CONCLUSION: Android is specifically throttling MetEngine's rapid
+// (25ms) setTimeout recursion much more aggressively than the simple
+// 1-second setInterval used here and for the session clock. The fix
+// is to stop depending on that 25ms loop for anything that must fire
+// reliably in the background, and instead trigger onRestEnd() directly
+// from THIS interval — the one with actual confirmed evidence of
+// surviving screen-off correctly.
+//
+// HONEST CAVEAT (documented, not hidden): this interval is not
+// PROVEN to fire at a perfect literal 1000ms cadence every single
+// time in the background — only that it ticks often enough to keep
+// the DISPLAY accurate when sampled. It's possible the actual
+// transition could occasionally fire a few seconds late rather than
+// at the exact instant restRemaining hits 0. That is a vastly better
+// failure mode than the current bug (frozen indefinitely, requiring
+// the user to physically reopen the phone) and matches the one
+// mechanism with real confirmed reliability evidence from this
+// project's own device testing, rather than another unverified theory
+// about a different API.
+//
+// This also REMOVES the MetEngine.setVolume(0)/restore-to-0.75
+// workaround Round 2 introduced — rest no longer touches MetEngine at
+// all, so that complexity is no longer needed. beginSet()'s volume
+// line and pauseBtn's MetEngine.resume()/setDurationFromNow() calls
+// for the resting case are correspondingly reverted below, since
+// nothing in the rest period interacts with MetEngine anymore.
+//
+// ── FIX ROUND 4: removed two broken diagnostic console.log lines ──
+// During Round 3 testing, a diagnostic console.log was added to this
+// tick (by the user, copying a suggested snippet) that referenced a
+// variable named `remaining` — but no such variable exists in this
+// function; the real variable is `restRemaining`. This threw a
+// ReferenceError on EVERY tick, the very first line in the callback,
+// BEFORE the line that updates restRemaining and BEFORE the line that
+// checks `if(restRemaining<=0)` and calls onRestEnd(). Since an
+// uncaught error inside a setInterval callback does not stop the
+// interval itself, it just kept firing and immediately crashing, once
+// per second, forever — never reaching the line that would end rest
+// and start the next set. This fully explains the entire "rest freezes
+// indefinitely until the phone is reopened" symptom investigated across
+// Rounds 1-3: there was no Android background-throttling mystery at
+// all. A similar temporary diagnostic log was also added to onRestEnd()
+// (logging MetEngine.getStatus().audioCtxState) during the
+// investigation into a (since-disproven) AudioContext-suspension
+// theory — also removed here, since its job is done and it has no
+// place in production code. Both diagnostics directly enabled finding
+// this real bug via a live chrome://inspect session against the actual
+// device, and are removed now that they've served their purpose.
+// ── FIX ROUND 5: clear any previous rest interval before starting a
+// new one ──
+// THE BUG: beginRest() reassigned restIntervalID to a new setInterval
+// every time it ran, but never explicitly cleared whatever the OLD
+// value of restIntervalID was first. The only place the interval ever
+// got cleared was inside its OWN callback, on the happy path where
+// restRemaining naturally reaches <=0 (line below). If that ever
+// DIDN'T happen cleanly for any reason — and after the Round 4 fix,
+// it should now reach that point correctly most of the time, but
+// real-device testing showed inconsistent behaviour where later rest
+// periods in the same session progressively degraded compared to the
+// first — the old interval would keep running silently in the
+// background, and this function would start a SECOND interval on top
+// of it. Across multiple rest periods in one session, this could
+// compound into several overlapping intervals all ticking
+// simultaneously, all eventually racing to call onRestEnd() — which
+// plausibly explains why the FIRST rest period in a session tended to
+// behave best, with each subsequent one more likely to misbehave or
+// freeze: more concurrent background timers is exactly the kind of
+// thing that makes Android's background-throttling behavior worse,
+// not just an unlucky coincidence.
+//
+// THE FIX: explicitly clearInterval(restIntervalID) at the very top
+// of this function, before doing anything else — the same defensive
+// pattern already used everywhere else in this file that touches
+// this same variable (stopBtn, skipBtn, navGuard all do this).
+// ── TEMPORARY DIAGNOSTIC (no chrome://inspect needed) ──────────────
+// Logs every rest-tick (timestamp, remaining, any caught error) to
+// localStorage, and shows the full trail as an on-screen alert() the
+// moment onRestEnd() actually fires -- whether that's on time or only
+// after the phone is reopened following a freeze. This lets us see
+// exactly what happened during a frozen rest period directly on the
+// phone's own screen, without needing a live USB-debugging connection
+// at all. Wrapping the WHOLE tick body in try/catch also directly
+// tests whether there's a SECOND hidden error (of the same kind that
+// caused the original freeze) still silently breaking this callback --
+// if so, it will be caught and recorded here instead of silently
+// killing the interval the same way the original bug did.
+function _diagLog(msg){
+  try{
+    const key="_restDiagLog";
+    const log=JSON.parse(localStorage.getItem(key)||"[]");
+    log.push(msg);
+    if(log.length>200) log.shift(); // cap so it can't grow unbounded
+    localStorage.setItem(key, JSON.stringify(log));
+  }catch(e){/* localStorage itself failing is not the thing we're testing for here */}
+}
+function _diagShowAndClear(){
+  try{
+    const key="_restDiagLog";
+    const log=JSON.parse(localStorage.getItem(key)||"[]");
+    localStorage.removeItem(key);
+    if(log.length) alert("[REST DIAG]\n"+log.join("\n"));
+  }catch(e){alert("[REST DIAG] failed to read log: "+e.message);}
+}
+
 function beginRest(sec,setIdx){
+  clearInterval(restIntervalID);
   isResting=true;restRemaining=sec;restTotal=sec;showCenter("rest");
+  _restStartTs = Date.now();
+  _restPausedAccum = 0;
+  localStorage.removeItem("_restDiagLog");
+  _diagLog("beginRest start | "+Date.now()+" | sec="+sec);
   $("restCnt").textContent=sec;$("restRing").style.strokeDashoffset="251.2";updateInfo();
   restIntervalID=setInterval(()=>{
-    if(isPaused)return;restRemaining--;$("restCnt").textContent=restRemaining;
-    $("restRing").style.strokeDashoffset=(251.2*(restRemaining/restTotal)).toFixed(1);
-    if(restRemaining<=0){clearInterval(restIntervalID);onRestEnd(setIdx);}
+    try{
+      if(isPaused){_diagLog("tick "+Date.now()+" | PAUSED, skipped");return;}
+      const elapsedMs = (Date.now() - _restStartTs) - _restPausedAccum;
+      restRemaining = Math.max(0, restTotal - elapsedMs/1000);
+      const displayRemaining = Math.ceil(restRemaining);
+      $("restCnt").textContent=displayRemaining;
+      $("restRing").style.strokeDashoffset=(251.2*(restRemaining/restTotal)).toFixed(1);
+      _diagLog("tick "+Date.now()+" | remaining="+restRemaining.toFixed(1));
+      if(restRemaining<=0){
+        _diagLog("REACHED ZERO "+Date.now()+" | calling onRestEnd");
+        clearInterval(restIntervalID);onRestEnd(setIdx);
+      }
+    }catch(e){
+      _diagLog("ERROR "+Date.now()+" | "+e.message+" | "+(e.stack||"").split("\n")[0]);
+    }
   },1000);
 }
-function onRestEnd(setIdx){if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);}
+function onRestEnd(setIdx){
+  _diagLog("onRestEnd FIRED "+Date.now());
+  _diagShowAndClear();
+  if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);
+}
 
 // ── Diary nudge ──────────────────────────────────────────────
 let _athleticSessionData = null;
@@ -655,6 +931,7 @@ function endSession(){
   finaliseSet();MetEngine.stop();stopRamp();stopClock();
   clearTimeout(setDurTimerID);clearInterval(restIntervalID);
   isRunning=false;isPaused=false;isResting=false;
+  stopBgKeepAlive();
   _saveAthlSession(false);
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
@@ -668,6 +945,7 @@ $("startBtn").addEventListener("click",()=>{
   _sessionSaved=false;
   $("stepsVal").textContent="0";$("durVal").textContent="00:00:00";
   showCenter("controls");isRunning=true;isPaused=false;
+  startBgKeepAlive();
   MetEngine.setVolume(0.75);MetEngine.setAccentPattern("off");registerEngineCallbacks();
   if(m==="regular"){sessionStartBPM=cadence;updateGauge(cadence);MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();MetEngine.start();}
   else if(m==="cadenceRamp"){MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();startRamp();MetEngine.start();}
@@ -676,10 +954,39 @@ $("startBtn").addEventListener("click",()=>{
 
 $("pauseBtn").addEventListener("click",()=>{
   isPaused=!isPaused;$("pauseBtn").innerHTML=isPaused?"▶":"❚❚";
-  if(isPaused){if(setStartTime>0)setElapsed+=Math.round((performance.now()-setStartTime)/1000);setStartTime=0;MetEngine.clearDuration();MetEngine.pause();clearTimeout(setDurTimerID);}
+  if(isPaused){
+    if(setStartTime>0)setElapsed+=Math.round((performance.now()-setStartTime)/1000);setStartTime=0;MetEngine.clearDuration();MetEngine.pause();clearTimeout(setDurTimerID);
+    // ── FIX: record when the pause began, for BOTH the session clock
+    // and the rest timer, so the time spent paused can be excluded
+    // from their elapsed-time math on resume (see startClock/beginRest
+    // fix notes above for why this is needed).
+    _sessionPauseStartedAt = Date.now();
+    if(isResting) _restPauseStartedAt = Date.now();
+  }
   else{
-    setStartTime=performance.now();
+    // ── FIX ROUND 2: setStartTime is active-phase-only bookkeeping
+    // (used by setElapsed/onActiveEnd). It must NOT be touched when
+    // resuming from a REST pause — previously this line ran
+    // unconditionally on every resume, including rest. That meant a
+    // pause/resume cycle during rest would leave setStartTime holding
+    // a stale non-zero timestamp from the rest period, which the NEXT
+    // active-phase pause (line above, `if(setStartTime>0)`) would then
+    // incorrectly treat as active-phase elapsed time, corrupting
+    // setElapsed for the following set. Moved inside the !isResting
+    // branch below so it only ever applies to the active phase.
+    // ── FIX: add the just-finished pause duration to the accumulators
+    // BEFORE resuming either timer, so neither one counts paused time
+    // as elapsed.
+    if(_sessionPauseStartedAt>0){
+      _sessionPausedAccum += (Date.now() - _sessionPauseStartedAt);
+      _sessionPauseStartedAt = 0;
+    }
+    if(isResting && _restPauseStartedAt>0){
+      _restPausedAccum += (Date.now() - _restPauseStartedAt);
+      _restPauseStartedAt = 0;
+    }
     if(!isResting){
+      setStartTime=performance.now();
       const s=plannedSets[currentSetIdx];
       if(s&&s.duration>0){
         const rem=Math.max(0,s.duration-setElapsed);
@@ -687,6 +994,12 @@ $("pauseBtn").addEventListener("click",()=>{
         else{MetEngine.resume();onActiveEnd(currentSetIdx);}
       }else{MetEngine.resume();}
     }
+    // ── FIX ROUND 3: no MetEngine calls needed here for the resting
+    // case — beginRest() no longer drives anything through MetEngine
+    // (see beginRest fix notes). The Date.now()-anchored pause
+    // bookkeeping above (_restPausedAccum) already correctly excludes
+    // the paused duration from the rest countdown's elapsed-time math;
+    // nothing further needs to happen on resume for rest specifically.
   }
 });
 
@@ -697,6 +1010,7 @@ $("stopBtn").addEventListener("click",()=>{
   if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
   closePhase();finaliseSet();_saveAthlSession(true);
   isRunning=false;isPaused=false;isResting=false;
+  stopBgKeepAlive();
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
 });
@@ -729,6 +1043,9 @@ function showAchievements(list){if(!list||!list.length)return;list.forEach((a,i)
 
 let _lastSaved=0;
 let _sessionSaved=false;
+// (_sessionPauseStartedAt and _restPauseStartedAt are declared once,
+// near the top of the file alongside the rest of the session state.)
+
 // ── Navigation guard — confirm before leaving active session ─────────────
 function navGuard(dest){
   if(isRunning){
@@ -741,6 +1058,7 @@ function navGuard(dest){
     if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
     closePhase();finaliseSet();_saveAthlSession(true);
     isRunning=false;isPaused=false;isResting=false;
+    stopBgKeepAlive();
   }
   window.location.href=dest;
 }
@@ -862,9 +1180,8 @@ function renderConfigBody(id){
 <div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div></div></div></div>`;}
   else if(id==="fixedInterval"){
     body.innerHTML=`<div class="cfg-section"><div class="cfg-section-label">Interval Settings</div>
-<div class="cfg-row2" style="margin-bottom:8px;">
-  <div class="cfg-field"><div class="cfg-label">Sets (max 20)</div><input class="cfg-input" id="c_sets" type="number" value="4" min="1" max="20"/></div>
-  <div class="cfg-field"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence_fi" type="number" value="140" min="40" max="420"/></div>
+<div class="cfg-field" style="margin-bottom:8px;">
+  <div class="cfg-label">Sets (max 20)</div><input class="cfg-input" id="c_sets" type="number" value="4" min="1" max="20"/>
 </div>
 <div class="cfg-row2">
   <div class="cfg-field"><div class="cfg-label">Duration</div>
@@ -887,7 +1204,7 @@ function renderConfigBody(id){
     </div>
     <div class="tp-label">HH &nbsp;:&nbsp; MM &nbsp;:&nbsp; SS</div>
   </div>
-</div><div class="cfg-field" style="margin-top:6px;"><div class="cfg-label">Cadence type</div><select class="cfg-select" id="c_cadMode"><option value="uniform">Uniform — same cadence all sets</option><option value="perSet">Per set — different cadence each set</option></select></div><div class="cfg-field" id="c_unifWrap"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence_fi_per" type="number" value="140" min="40" max="420"/></div></div><div class="cfg-section" id="c_perSetSection" style="display:none"><div class="cfg-section-label">Cadence per set</div><div class="sets-list" id="c_perSetRows"></div></div><div class="cfg-section"><div class="flex-row"><input type="checkbox" id="c_flex"/><label for="c_flex">Allow cadence changes mid-set (Flexible Mode)</label></div></div>`;
+</div><div class="cfg-field" style="margin-top:6px;"><div class="cfg-label">Cadence type</div><select class="cfg-select" id="c_cadMode"><option value="uniform">Uniform — same cadence all sets</option><option value="perSet">Per set — different cadence each set</option></select></div><div class="cfg-field" id="c_unifWrap"><div class="cfg-label">Cadence (SPM)</div><input class="cfg-input" id="c_cadence_fi" type="number" value="140" min="40" max="420"/></div></div><div class="cfg-section" id="c_perSetSection" style="display:none"><div class="cfg-section-label">Cadence per set</div><div class="sets-list" id="c_perSetRows"></div></div><div class="cfg-section"><div class="flex-row"><input type="checkbox" id="c_flex"/><label for="c_flex">Allow cadence changes mid-set (Flexible Mode)</label></div></div>`;
     setTimeout(()=>{const cm=$("c_cadMode"),sn=$("c_sets");const rebuild=()=>{const n=Math.min(20,parseInt(sn.value)||4);const c=$("c_perSetRows");if(!c)return;c.innerHTML="";for(let i=0;i<n;i++){const r=document.createElement("div");r.className="set-row";r.innerHTML=`<span class="set-row-num">SET ${i+1}</span><input type="number" value="140" min="40" max="420" placeholder="SPM"/>`;c.appendChild(r);}};cm&&cm.addEventListener("change",()=>{const ps=cm.value==="perSet";$("c_unifWrap").style.display=ps?"none":"flex";$("c_perSetSection").style.display=ps?"block":"none";if(ps)rebuild();});sn&&sn.addEventListener("input",()=>{if(cm.value==="perSet")rebuild();});},60);
   }
   else if(id==="customSemi"){
@@ -993,6 +1310,39 @@ $("proceedBtn").addEventListener("click",()=>{
   }
   const mName=MODES.find(x=>x.id===id).name;
   $("mainModeLabel").textContent=mName.replace("—","").trim().toUpperCase().substring(0,20);
+
+  // ── FIX: sync `cadence` to the configured value for EVERY mode ──
+  // `regular` and `cadenceRamp` already set `cadence` inside their
+  // own branches above. timedRun, fixedInterval, customSemi, and
+  // customFull never did — they only populate plannedSets — so the
+  // gauge/info-strip below kept showing the leftover/default cadence
+  // from BEFORE configuration, right up until Start was pressed and
+  // beginSet(0) finally set `cadence = plannedSets[0].cadence`.
+  // This made it look like the configured value hadn't taken effect.
+  //
+  // IMPORTANT: gated on `id` explicitly (not just plannedSets.length)
+  // because plannedSets is never cleared by the `regular` branch —
+  // if the user previously configured a different mode and then
+  // switches to `regular`, plannedSets would still hold THAT mode's
+  // stale array, and a length-only check would incorrectly override
+  // the cadence that `regular`'s own branch just set correctly above.
+  if((id==="timedRun"||id==="fixedInterval"||id==="customSemi"||id==="customFull") && plannedSets.length>0){
+    cadence = plannedSets[0].cadence;
+  }
+
+  // ── FIX: reset stale Duration/Steps display when landing on a
+  // freshly-configured main screen ──
+  // Previously, proceedBtn never touched durVal/stepsVal at all.
+  // startBtn only resets them at the moment START is actually pressed.
+  // So if a session had just ended (e.g. a Fixed Interval session
+  // that finished at 7:01), and the user went back, reconfigured the
+  // same or a different mode, and tapped "Proceed to Metronome" again
+  // — the main screen would show "CONFIGURED · READY / PRESS START"
+  // alongside the PREVIOUS session's leftover Duration/Steps numbers,
+  // since nothing had reset them yet. This looked like a miscalculated
+  // total, but was actually just stale display data from before.
+  $("durVal").textContent="00:00:00";$("stepsVal").textContent="0";
+
   updateGauge(cadence);updateInfo();screenHistory=["screenMain"];goTo("screenMain",false);
   $("screenMain").classList.add("active");document.querySelectorAll(".screen:not(#screenMain)").forEach(s=>s.classList.remove("active","slide-left"));
 });
