@@ -405,7 +405,7 @@ body::before{content:"";position:fixed;width:500px;height:500px;border-radius:50
             </svg>
             <div class="rest-inner">
               <span class="rest-lbl">REST</span>
-              <span class="rest-cnt" id="restCnt" onclick="_diagShowAndClear()" title="Tap to view diagnostic log">30</span>
+              <span class="rest-cnt" id="restCnt">30</span>
             </div>
             <div class="rest-plus" id="restPlus">+10 SEC</div>
           </div>
@@ -475,30 +475,6 @@ let _restStartTs=0, _restPausedAccum=0, _restPauseStartedAt=0;
 let sessionStartBPM=140,setsSkippedCount=0,storedConfig={};
 
 const $=id=>document.getElementById(id);
-
-// ── Background keep-alive: an Android foreground service (keeps the
-// process alive + shows a persistent notification) plus a partial
-// wake lock (keeps the CPU executing so JS timers actually fire) while
-// a session is running. Both no-op outside the native Android shell
-// (e.g. browser preview) where the plugins aren't registered.
-function _fgService(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.ForegroundService;}
-function _wakeLock(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.BeatStrideWakeLock;}
-function startBgKeepAlive(){
-  const fg=_fgService();
-  if(fg)fg.startForegroundService({
-    id:1,
-    title:"BeatStride",
-    body:"Workout in progress",
-    smallIcon:"ic_launcher_foreground",
-    silent:true,
-    notificationChannelId:"default",
-  }).catch(()=>{});
-  const wl=_wakeLock();if(wl)wl.acquire().catch(()=>{});
-}
-function stopBgKeepAlive(){
-  const fg=_fgService();if(fg)fg.stopForegroundService().catch(()=>{});
-  const wl=_wakeLock();if(wl)wl.release().catch(()=>{});
-}
 
 // ── FIX: read saved default cadence from Settings ───────────────
 // Previously `cadence` was always hardcoded to 140 regardless of
@@ -843,67 +819,23 @@ function onActiveEnd(idx){
 // of this function, before doing anything else — the same defensive
 // pattern already used everywhere else in this file that touches
 // this same variable (stopBtn, skipBtn, navGuard all do this).
-// ── TEMPORARY DIAGNOSTIC (no chrome://inspect needed) ──────────────
-// Logs every rest-tick (timestamp, remaining, any caught error) to
-// localStorage, and shows the full trail as an on-screen alert() the
-// moment onRestEnd() actually fires -- whether that's on time or only
-// after the phone is reopened following a freeze. This lets us see
-// exactly what happened during a frozen rest period directly on the
-// phone's own screen, without needing a live USB-debugging connection
-// at all. Wrapping the WHOLE tick body in try/catch also directly
-// tests whether there's a SECOND hidden error (of the same kind that
-// caused the original freeze) still silently breaking this callback --
-// if so, it will be caught and recorded here instead of silently
-// killing the interval the same way the original bug did.
-function _diagLog(msg){
-  try{
-    const key="_restDiagLog";
-    const log=JSON.parse(localStorage.getItem(key)||"[]");
-    log.push(msg);
-    if(log.length>200) log.shift(); // cap so it can't grow unbounded
-    localStorage.setItem(key, JSON.stringify(log));
-  }catch(e){/* localStorage itself failing is not the thing we're testing for here */}
-}
-function _diagShowAndClear(){
-  try{
-    const key="_restDiagLog";
-    const log=JSON.parse(localStorage.getItem(key)||"[]");
-    localStorage.removeItem(key);
-    if(log.length) alert("[REST DIAG]\n"+log.join("\n"));
-  }catch(e){alert("[REST DIAG] failed to read log: "+e.message);}
-}
-
 function beginRest(sec,setIdx){
   clearInterval(restIntervalID);
   isResting=true;restRemaining=sec;restTotal=sec;showCenter("rest");
   _restStartTs = Date.now();
   _restPausedAccum = 0;
-  localStorage.removeItem("_restDiagLog");
-  _diagLog("beginRest start | "+Date.now()+" | sec="+sec);
   $("restCnt").textContent=sec;$("restRing").style.strokeDashoffset="251.2";updateInfo();
   restIntervalID=setInterval(()=>{
-    try{
-      if(isPaused){_diagLog("tick "+Date.now()+" | PAUSED, skipped");return;}
-      const elapsedMs = (Date.now() - _restStartTs) - _restPausedAccum;
-      restRemaining = Math.max(0, restTotal - elapsedMs/1000);
-      const displayRemaining = Math.ceil(restRemaining);
-      $("restCnt").textContent=displayRemaining;
-      $("restRing").style.strokeDashoffset=(251.2*(restRemaining/restTotal)).toFixed(1);
-      _diagLog("tick "+Date.now()+" | remaining="+restRemaining.toFixed(1));
-      if(restRemaining<=0){
-        _diagLog("REACHED ZERO "+Date.now()+" | calling onRestEnd");
-        clearInterval(restIntervalID);onRestEnd(setIdx);
-      }
-    }catch(e){
-      _diagLog("ERROR "+Date.now()+" | "+e.message+" | "+(e.stack||"").split("\n")[0]);
-    }
+    if(isPaused)return;
+    const elapsedMs = (Date.now() - _restStartTs) - _restPausedAccum;
+    restRemaining = Math.max(0, restTotal - elapsedMs/1000);
+    const displayRemaining = Math.ceil(restRemaining);
+    $("restCnt").textContent=displayRemaining;
+    $("restRing").style.strokeDashoffset=(251.2*(restRemaining/restTotal)).toFixed(1);
+    if(restRemaining<=0){clearInterval(restIntervalID);onRestEnd(setIdx);}
   },1000);
 }
-function onRestEnd(setIdx){
-  _diagLog("onRestEnd FIRED "+Date.now());
-  _diagShowAndClear();
-  if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);
-}
+function onRestEnd(setIdx){if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);}
 
 // ── Diary nudge ──────────────────────────────────────────────
 let _athleticSessionData = null;
@@ -931,7 +863,6 @@ function endSession(){
   finaliseSet();MetEngine.stop();stopRamp();stopClock();
   clearTimeout(setDurTimerID);clearInterval(restIntervalID);
   isRunning=false;isPaused=false;isResting=false;
-  stopBgKeepAlive();
   _saveAthlSession(false);
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
@@ -945,7 +876,6 @@ $("startBtn").addEventListener("click",()=>{
   _sessionSaved=false;
   $("stepsVal").textContent="0";$("durVal").textContent="00:00:00";
   showCenter("controls");isRunning=true;isPaused=false;
-  startBgKeepAlive();
   MetEngine.setVolume(0.75);MetEngine.setAccentPattern("off");registerEngineCallbacks();
   if(m==="regular"){sessionStartBPM=cadence;updateGauge(cadence);MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();MetEngine.start();}
   else if(m==="cadenceRamp"){MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();startRamp();MetEngine.start();}
@@ -1010,7 +940,6 @@ $("stopBtn").addEventListener("click",()=>{
   if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
   closePhase();finaliseSet();_saveAthlSession(true);
   isRunning=false;isPaused=false;isResting=false;
-  stopBgKeepAlive();
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
 });
@@ -1058,7 +987,6 @@ function navGuard(dest){
     if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
     closePhase();finaliseSet();_saveAthlSession(true);
     isRunning=false;isPaused=false;isResting=false;
-    stopBgKeepAlive();
   }
   window.location.href=dest;
 }
