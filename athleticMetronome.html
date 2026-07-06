@@ -476,6 +476,31 @@ let sessionStartBPM=140,setsSkippedCount=0,storedConfig={};
 
 const $=id=>document.getElementById(id);
 
+function _fgService(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.ForegroundService;}
+function _wakeLock(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.BeatStrideWakeLock;}
+function startBgKeepAlive(){
+  const fg=_fgService();
+  if(fg)fg.startForegroundService({
+    id:1,title:"BeatStride",body:"Workout in progress",
+    smallIcon:"ic_launcher_foreground",silent:true,notificationChannelId:"default",
+  }).catch(()=>{});
+  const wl=_wakeLock();
+  if(wl){
+    // Request battery optimisation exemption so OEM battery managers
+    // (Vivo iManager, MIUI etc.) don't override the wake lock. Shows a
+    // one-time system dialog; no-ops if already exempted.
+    wl.isIgnoringBatteryOptimizations().then(r=>{
+      if(!r.ignored) wl.requestIgnoreBatteryOptimizations().catch(()=>{});
+    }).catch(()=>{});
+    wl.acquire().catch(()=>{});
+  }
+}
+function stopBgKeepAlive(){
+  const fg=_fgService();if(fg)fg.stopForegroundService().catch(()=>{});
+  const wl=_wakeLock();
+  if(wl){wl.cancelScheduledRestEnd().catch(()=>{});wl.release().catch(()=>{});}
+}
+
 // ── FIX: read saved default cadence from Settings ───────────────
 // Previously `cadence` was always hardcoded to 140 regardless of
 // what the user set under Settings → Athletic Defaults → Default
@@ -819,12 +844,46 @@ function onActiveEnd(idx){
 // of this function, before doing anything else — the same defensive
 // pattern already used everywhere else in this file that touches
 // this same variable (stopBtn, skipBtn, navGuard all do this).
+// Native rest-end callback — invoked by BeatStrideWakeLockPlugin's
+// HandlerThread via WebView.evaluateJavascript() when the rest duration
+// elapses on the native side. This fires reliably even with the screen
+// locked on aggressive OEMs (Vivo, MIUI etc.) that freeze JS timers.
+window._nativeRestEnd = function(idx){
+  if(!isResting||isPaused)return;
+  const elapsedMs=(Date.now()-_restStartTs)-_restPausedAccum;
+  const remaining=restTotal-elapsedMs/1000;
+  clearInterval(restIntervalID);
+  if(remaining<=0){
+    onRestEnd(idx);
+  }else if(remaining<4){
+    // Alarm fired early (lead-time compensation) — fire at exact wall-clock moment.
+    setTimeout(()=>{if(isResting&&!isPaused)onRestEnd(idx);},remaining*1000);
+  }
+  // remaining>=4 means spurious call; setInterval fallback handles it.
+};
+
 function beginRest(sec,setIdx){
   clearInterval(restIntervalID);
   isResting=true;restRemaining=sec;restTotal=sec;showCenter("rest");
   _restStartTs = Date.now();
   _restPausedAccum = 0;
   $("restCnt").textContent=sec;$("restRing").style.strokeDashoffset="251.2";updateInfo();
+
+  // Schedule native rest-end timer — the primary trigger. Runs on a
+  // THREAD_PRIORITY_AUDIO HandlerThread in native code; wakes the JS
+  // thread via resumeTimers()+evaluateJavascript() when it fires.
+  const wl=_wakeLock();
+  // Fire the alarm 400ms early to offset Activity-resume overhead
+  // (~300-500ms from alarm fire → notification → handleOnResume()).
+  // _nativeRestEnd uses a setTimeout for the remaining fragment so
+  // the actual onRestEnd() call still lands at the correct wall-clock time.
+  // 3s lead covers deeper Doze stages (3+ min rests take ~2000ms to wake).
+  const _alarmDelayMs=Math.max(1000,sec*1000-3000);
+  if(wl)wl.scheduleRestEnd({delayMs:_alarmDelayMs,setIdx}).catch(()=>{});
+
+  // setInterval drives the display countdown only. It also calls
+  // onRestEnd() as a fallback (e.g. on desktop/web preview where the
+  // native plugin is absent, or if the native timer somehow fires late).
   restIntervalID=setInterval(()=>{
     if(isPaused)return;
     const elapsedMs = (Date.now() - _restStartTs) - _restPausedAccum;
@@ -835,7 +894,14 @@ function beginRest(sec,setIdx){
     if(restRemaining<=0){clearInterval(restIntervalID);onRestEnd(setIdx);}
   },1000);
 }
-function onRestEnd(setIdx){if(currentSetData)currentSetData.actualRest=restTotal;finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);}
+function onRestEnd(setIdx){
+  if(!isResting)return; // guard against double-call from setInterval + native alarm
+  clearInterval(restIntervalID);
+  const wl=_wakeLock();if(wl)wl.cancelScheduledRestEnd().catch(()=>{});
+  MetEngine.setVolume(0.75);
+  if(currentSetData)currentSetData.actualRest=restTotal;
+  finaliseSet();isResting=false;showCenter("controls");beginSet(setIdx+1);
+}
 
 // ── Diary nudge ──────────────────────────────────────────────
 let _athleticSessionData = null;
@@ -863,6 +929,7 @@ function endSession(){
   finaliseSet();MetEngine.stop();stopRamp();stopClock();
   clearTimeout(setDurTimerID);clearInterval(restIntervalID);
   isRunning=false;isPaused=false;isResting=false;
+  stopBgKeepAlive();
   _saveAthlSession(false);
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
@@ -876,6 +943,7 @@ $("startBtn").addEventListener("click",()=>{
   _sessionSaved=false;
   $("stepsVal").textContent="0";$("durVal").textContent="00:00:00";
   showCenter("controls");isRunning=true;isPaused=false;
+  startBgKeepAlive();
   MetEngine.setVolume(0.75);MetEngine.setAccentPattern("off");registerEngineCallbacks();
   if(m==="regular"){sessionStartBPM=cadence;updateGauge(cadence);MetEngine.setBPM(cadence);MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();MetEngine.start();}
   else if(m==="cadenceRamp"){MetEngine.setInstrument("click");MetEngine.setMeasureBeats(4);updateInfo();startClock();startRamp();MetEngine.start();}
@@ -924,12 +992,6 @@ $("pauseBtn").addEventListener("click",()=>{
         else{MetEngine.resume();onActiveEnd(currentSetIdx);}
       }else{MetEngine.resume();}
     }
-    // ── FIX ROUND 3: no MetEngine calls needed here for the resting
-    // case — beginRest() no longer drives anything through MetEngine
-    // (see beginRest fix notes). The Date.now()-anchored pause
-    // bookkeeping above (_restPausedAccum) already correctly excludes
-    // the paused duration from the rest countdown's elapsed-time math;
-    // nothing further needs to happen on resume for rest specifically.
   }
 });
 
@@ -940,6 +1002,7 @@ $("stopBtn").addEventListener("click",()=>{
   if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
   closePhase();finaliseSet();_saveAthlSession(true);
   isRunning=false;isPaused=false;isResting=false;
+  stopBgKeepAlive();
   showCenter("start");$("pauseBtn").innerHTML="❚❚";updateInfo();
   if(sessionSec>=3) setTimeout(showDiaryNudge, 400);
 });
@@ -987,6 +1050,7 @@ function navGuard(dest){
     if(currentSetData&&setStartTime>0)currentSetData.actualActive=setElapsed+Math.round((performance.now()-setStartTime)/1000);
     closePhase();finaliseSet();_saveAthlSession(true);
     isRunning=false;isPaused=false;isResting=false;
+    stopBgKeepAlive();
   }
   window.location.href=dest;
 }
