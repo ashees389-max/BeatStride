@@ -133,6 +133,7 @@
   </style>
 </head>
 <body>
+<script src="storage.js"></script>
 
 <div class="stage" id="stage">
   <canvas id="canvas"></canvas>
@@ -303,8 +304,17 @@
 
 })();
 
-/* ── Navigation ── */
-const DEST = "metronomeItem.html";
+/* ── Navigation ──
+   If the user has picked a Default Mode in Settings ("Athletic" or
+   "Music"), skip the mode-select screen and go straight there.
+   Falls back to metronomeItem.html (mode select) when no default is
+   set — i.e. "Ask every time" — same as before this fix existed. */
+const MODE_DEST = { athletic: "athleticMetronome.html", music: "musicMetronome.html" };
+let DEST = "metronomeItem.html";
+if (typeof MetStorage !== "undefined") {
+  const defaultMode = MetStorage.getDefaultMode();
+  if (defaultMode && MODE_DEST[defaultMode]) DEST = MODE_DEST[defaultMode];
+}
 const WAIT = 1800;
 const FADE = 420;
 

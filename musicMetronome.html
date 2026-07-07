@@ -1938,7 +1938,22 @@ rebuildBeatDots();
 // Settings is completely unchanged.
 let _initialBPM = 120;
 if(typeof MetStorage !== "undefined"){
-  _initialBPM = MetStorage.getSettings().default_cadence_music || 120;
+  const _settings = MetStorage.getSettings();
+  _initialBPM = _settings.default_cadence_music || 120;
+
+  // ── FIX: read saved default instrument & volume from Settings ──────
+  // Same bug as BPM above: dashboard.html correctly WRITES
+  // default_instrument and volume_level via MetStorage.updateSettings(),
+  // but nothing ever READ them back here — currentInstrument/volume
+  // stayed hardcoded to "woodblock"/0.7 regardless of what was saved
+  // under Settings → Music Defaults.
+  currentInstrument = _settings.default_instrument || "woodblock";
+  if(instrumentSel) instrumentSel.value = currentInstrument;
+  MetEngine.setInstrument(currentInstrument);
+
+  volume = (typeof _settings.volume_level === "number") ? _settings.volume_level : 0.7;
+  volFill.style.width = (volume*100)+"%";
+  MetEngine.setVolume(volume);
 }
 setBPM(_initialBPM);
 

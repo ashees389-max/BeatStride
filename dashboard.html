@@ -876,13 +876,6 @@ html,body{
           </div>
           <div class="toggle-switch" id="toggleFlex"></div>
         </div>
-        <div class="setting-row">
-          <div class="setting-row-info">
-            <div class="setting-row-label">Voice Announcements</div>
-            <div class="setting-row-desc">Audio cues for set start, rest, and session complete</div>
-          </div>
-          <div class="toggle-switch on" id="toggleVoice"></div>
-        </div>
       </div>
 
       <div class="card">
@@ -1794,7 +1787,6 @@ function loadSettings(){
   document.getElementById("setInstrument").value=s.default_instrument;
   document.getElementById("setVolume").value=Math.round(s.volume_level*100);
   document.getElementById("toggleFlex").classList.toggle("on",s.flexible_mode_default);
-  document.getElementById("toggleVoice").classList.toggle("on",s.voice_announcements!==false);
   const kb=MetStorage.getStorageUsageKB();
   const maxKB=5120;
   document.getElementById("storageText").textContent=`${kb} KB / ~5 MB`;
@@ -1809,10 +1801,6 @@ document.getElementById("toggleFlex").addEventListener("click",function(){
   this.classList.toggle("on");
   saveSettings();
 });
-document.getElementById("toggleVoice").addEventListener("click",function(){
-  this.classList.toggle("on");
-  saveSettings();
-});
 
 function saveSettings(){
   const vol=parseInt(document.getElementById("setVolume").value)||70;
@@ -1822,7 +1810,6 @@ function saveSettings(){
     default_instrument:       document.getElementById("setInstrument").value,
     volume_level:             vol/100,
     flexible_mode_default:    document.getElementById("toggleFlex").classList.contains("on"),
-    voice_announcements:      document.getElementById("toggleVoice").classList.contains("on"),
   });
   const dm=document.getElementById("setDefaultMode").value;
   MetStorage.setDefaultMode(dm||null);

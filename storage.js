@@ -123,7 +123,6 @@ const MetStorage = (function () {
       default_measure_count        : 4,
       flexible_mode_default        : false,
       volume_level                 : 0.7,
-      voice_announcements          : true,
     };
   }
 
