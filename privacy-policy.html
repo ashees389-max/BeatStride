@@ -170,7 +170,7 @@
   <div class="logo">Phoenix Studio</div>
   <h1>Privacy Policy</h1>
   <div class="subtitle">BeatStride — Metronome &amp; Cadence Trainer</div>
-  <div class="updated">Last updated: June 2026</div>
+  <div class="updated">Last updated: July 2026</div>
 </div>
 
 <div class="content">
@@ -209,9 +209,18 @@
   <!-- Permissions -->
   <section>
     <h2>App Permissions</h2>
-    <p>BeatStride requests only one device permission:</p>
-    <div class="chip">🔊 Audio Playback</div>
-    <p style="margin-top:10px;">This is required to play metronome clicks and instrument sounds through your device's speaker or headphones. We do not request access to your microphone, camera, contacts, files, or location.</p>
+    <p>BeatStride requests the following device permissions. All of them exist to keep your training sessions running accurately in the background — none are used to collect or transmit any data.</p>
+    <div class="chip">🔔 Foreground Service &amp; Notification</div>
+    <div class="chip">🔋 Wake Lock &amp; Battery Optimization Exemption</div>
+    <div class="chip">⏰ Full-Screen Alert</div>
+    <div class="chip">🌐 Internet</div>
+    <ul style="margin-top:12px;">
+      <li><strong>Foreground Service &amp; Notification</strong> — keeps an Athletic-mode session's timers accurate and shows a persistent "Workout in progress" notification while your screen is off.</li>
+      <li><strong>Wake Lock &amp; Battery Optimization Exemption</strong> — prevents Android from slowing down session timers during long screen-off training runs. The battery-optimization exemption is requested via a one-time system dialog and can be declined without affecting the rest of the app.</li>
+      <li><strong>Full-Screen Alert</strong> — wakes your screen and shows an alarm-style notification above the lock screen when a rest period ends, so you don't miss the start of your next set.</li>
+      <li><strong>Internet</strong> — declared by the app framework but not used to send or receive any data. BeatStride makes no network requests of any kind.</li>
+    </ul>
+    <p style="margin-top:10px;">We do not request access to your microphone, camera, contacts, files, or location.</p>
   </section>
 
   <!-- Children -->
