@@ -9,7 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BeatStride — Music</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent;}
 
 /* ── Body: full screen on mobile, centers card on desktop ── */
 body{
@@ -285,6 +285,8 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   .settings-row{padding:8px 10px;}
   .row-label{min-width:100px;}
   .lower-control{padding:8px 12px;}
+  .music-mode-trigger-name{max-width:96px;font-size:.72rem;}
+  .music-mode-item-desc{font-size:.62rem;}
 }
 
 @media(max-height:780px){
@@ -305,6 +307,13 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   .mode-selector-area{padding:6px 10px;margin-bottom:6px;}
   .mode-row label{font-size:.78rem;}
   .mode-row select{font-size:.75rem;padding:4px 8px;}
+  .music-mode-trigger{padding:4px 10px;font-size:.75rem;}
+  .music-mode-panel{max-height:min(60svh,380px);}
+  .music-mode-panel-header{padding:10px 14px 8px;}
+  .music-mode-item{padding:9px 12px;}
+  .music-mode-item-icon{font-size:1.1rem;width:26px;}
+  .music-mode-item-name{font-size:.78rem;}
+  .music-mode-item-desc{font-size:.6rem;}
   .dynamic-params{
     display:grid;
     grid-template-columns:1fr 1fr 1fr;
@@ -464,6 +473,104 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
 }
 .mode-toast.show{transform:translateX(-50%) translateY(0);}
 
+/* ── Custom Mode Picker ──────────────────────────────────────────
+   The real #modeSelect stays in the DOM (display:none) as the single
+   source of truth — every existing behavior (the running-session
+   "Switch Mode?" confirm dialog, the voice bridge, session logging)
+   already reads/writes its .value and listens for its change event,
+   so none of that had to be touched. This is purely a custom-styled
+   presentation layer on top: tapping a card sets modeSelect.value and
+   dispatches a change event, exactly like picking a native <option>. ── */
+.music-mode-select-hidden{ display:none; }
+
+.music-mode-trigger{
+  display:flex;align-items:center;gap:8px;
+  background:#131e17;border:1px solid rgba(46,204,113,.35);
+  color:#ddf5e8;padding:6px 14px;border-radius:32px;
+  font-size:.8rem;cursor:pointer;outline:none;
+  transition:border-color .2s,background .2s;
+  max-width:100%;
+}
+@media(hover:hover){.music-mode-trigger:hover{border-color:#2ecc71;background:#182a20;}}
+.music-mode-trigger-icon{font-size:.95rem;line-height:1;flex-shrink:0;}
+.music-mode-trigger-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;}
+.music-mode-trigger-chev{color:#6fffb0;font-size:.7rem;flex-shrink:0;}
+
+.music-mode-panel-backdrop{
+  position:fixed;inset:0;z-index:1500;
+  background:rgba(0,0,0,.6);
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.music-mode-panel-backdrop.show{opacity:1;pointer-events:all;}
+
+.music-mode-panel{
+  position:fixed;left:0;right:0;bottom:0;z-index:1501;
+  background:rgba(6,16,11,.98);
+  border:1px solid rgba(46,204,113,.25);border-bottom:none;
+  border-radius:28px 28px 0 0;
+  max-width:560px;margin:0 auto;
+  max-height:min(72svh,520px);
+  display:flex;flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(0.22,1,0.36,1);
+  box-shadow:0 -20px 50px rgba(0,0,0,.5);
+  pointer-events:none;
+}
+.music-mode-panel.show{transform:translateY(0);pointer-events:all;}
+
+.music-mode-panel-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 12px;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.music-mode-panel-title{font-size:.95rem;font-weight:700;color:#8affc2;letter-spacing:.3px;}
+.music-mode-panel-close{
+  width:26px;height:26px;border-radius:50%;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;flex-shrink:0;
+}
+
+.music-mode-panel-list{
+  flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:8px;
+}
+.music-mode-panel-list::-webkit-scrollbar{display:none;}
+
+.music-mode-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  cursor:pointer;transition:background .2s,border-color .2s;
+}
+@media(hover:hover){.music-mode-item:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);}}
+.music-mode-item.selected{background:rgba(46,204,113,.1);border-color:rgba(46,204,113,.4);}
+.music-mode-item-icon{font-size:1.3rem;width:30px;text-align:center;flex-shrink:0;}
+.music-mode-item-info{flex:1;min-width:0;}
+.music-mode-item-name{font-size:.85rem;color:#fff;font-weight:600;margin-bottom:2px;}
+.music-mode-item.selected .music-mode-item-name{color:#2ecc71;}
+.music-mode-item-desc{font-size:.68rem;color:rgba(255,255,255,.4);line-height:1.4;}
+.music-mode-item-check{font-size:.85rem;color:#2ecc71;flex-shrink:0;opacity:0;transition:opacity .2s;}
+.music-mode-item.selected .music-mode-item-check{opacity:1;}
+
+/* Desktop / tablet: same "full-bleed sheet → centered floating card"
+   conversion already used for .session-summary above, at the same
+   breakpoint, so both overlays behave consistently. */
+@media(min-width:500px){
+  .music-mode-panel-backdrop{background:rgba(0,0,0,.7);}
+  .music-mode-panel{
+    left:50%;right:auto;bottom:auto;top:50%;
+    transform:translate(-50%,-42%);
+    width:min(420px,90vw);
+    border-radius:28px;
+    max-height:80vh;
+  }
+  .music-mode-panel.show{transform:translate(-50%,-50%);}
+}
+
 /* ── Diary prompt — now a section inside the full-screen summary,
    not a separate floating toast. This removes the entire class of
    bug where the toast and the summary card competed for the same
@@ -554,6 +661,57 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
 <!-- Mode change toast -->
 <div class="mode-toast" id="modeToast">Mode will apply on next session</div>
 
+<!-- Custom mode picker panel — presentation layer over #modeSelect -->
+<div class="music-mode-panel-backdrop" id="musicModeBackdrop"></div>
+<div class="music-mode-panel" id="musicModePanel">
+  <div class="music-mode-panel-header">
+    <span class="music-mode-panel-title">Select Mode</span>
+    <div class="music-mode-panel-close" id="musicModePanelClose">✕</div>
+  </div>
+  <div class="music-mode-panel-list" id="musicModePanelList">
+    <div class="music-mode-item" data-mode="regular">
+      <div class="music-mode-item-icon">🎯</div>
+      <div class="music-mode-item-info">
+        <div class="music-mode-item-name">Regular Metronome</div>
+        <div class="music-mode-item-desc">Steady click at a fixed BPM.</div>
+      </div>
+      <div class="music-mode-item-check">✓</div>
+    </div>
+    <div class="music-mode-item" data-mode="practiceRamp">
+      <div class="music-mode-item-icon">📈</div>
+      <div class="music-mode-item-info">
+        <div class="music-mode-item-name">Practice Ramp</div>
+        <div class="music-mode-item-desc">Gradually increases BPM over time.</div>
+      </div>
+      <div class="music-mode-item-check">✓</div>
+    </div>
+    <div class="music-mode-item" data-mode="countdownRamp">
+      <div class="music-mode-item-icon">📉</div>
+      <div class="music-mode-item-info">
+        <div class="music-mode-item-name">Countdown Ramp</div>
+        <div class="music-mode-item-desc">Gradually decreases BPM over time.</div>
+      </div>
+      <div class="music-mode-item-check">✓</div>
+    </div>
+    <div class="music-mode-item" data-mode="polyRhythm">
+      <div class="music-mode-item-icon">🥁</div>
+      <div class="music-mode-item-info">
+        <div class="music-mode-item-name">Poly Rhythm</div>
+        <div class="music-mode-item-desc">Two rhythms layered simultaneously.</div>
+      </div>
+      <div class="music-mode-item-check">✓</div>
+    </div>
+    <div class="music-mode-item" data-mode="loopFermata">
+      <div class="music-mode-item-icon">𝄐</div>
+      <div class="music-mode-item-info">
+        <div class="music-mode-item-name">Loop with Fermata</div>
+        <div class="music-mode-item-desc">Plays a loop, then a timed pause.</div>
+      </div>
+      <div class="music-mode-item-check">✓</div>
+    </div>
+  </div>
+</div>
+
 <div class="main-mode">
 
 <div class="main-mode-scroll">
@@ -617,7 +775,16 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   <div class="mode-selector-area">
     <div class="mode-row">
       <label>🎛️ MODE</label>
-      <select id="modeSelect">
+      <!-- Custom trigger — the real control users see and tap.
+           #modeSelect below stays the single source of truth that all
+           existing mode-change logic (running-session confirm dialog,
+           voice bridge, session logging) already reads/writes. -->
+      <div class="music-mode-trigger" id="musicModeTrigger" role="button" tabindex="0" aria-haspopup="true">
+        <span class="music-mode-trigger-icon" id="musicModeTriggerIcon">🎯</span>
+        <span class="music-mode-trigger-name" id="musicModeTriggerName">Regular Metronome</span>
+        <span class="music-mode-trigger-chev">▾</span>
+      </div>
+      <select id="modeSelect" class="music-mode-select-hidden">
         <option value="regular">Regular Metronome</option>
         <option value="practiceRamp">Practice Ramp</option>
         <option value="countdownRamp">Countdown Ramp</option>
@@ -1681,7 +1848,62 @@ modeSelect.onchange = ()=>{
   updateDynamicPanel();
   rampBarWrap.classList.remove("visible");
   rebuildBeatDots();
+  syncMusicModeTrigger();
 };
+
+// ═══════════════════════════════════════════════
+//  CUSTOM MODE PICKER — presentation layer over #modeSelect
+//  #modeSelect (hidden) stays the single source of truth. Tapping a
+//  card here just sets its .value and dispatches "change", so it flows
+//  through the exact same modeSelect.onchange handler above — including
+//  the running-session confirm dialog — with nothing duplicated.
+// ═══════════════════════════════════════════════
+const MUSIC_MODE_META = {
+  regular:       { icon:"🎯", name:"Regular Metronome" },
+  practiceRamp:  { icon:"📈", name:"Practice Ramp" },
+  countdownRamp: { icon:"📉", name:"Countdown Ramp" },
+  polyRhythm:    { icon:"🥁", name:"Poly Rhythm" },
+  loopFermata:   { icon:"𝄐", name:"Loop with Fermata" },
+};
+const musicModeTrigger      = document.getElementById("musicModeTrigger");
+const musicModeTriggerIcon  = document.getElementById("musicModeTriggerIcon");
+const musicModeTriggerName  = document.getElementById("musicModeTriggerName");
+const musicModeBackdrop     = document.getElementById("musicModeBackdrop");
+const musicModePanel        = document.getElementById("musicModePanel");
+const musicModePanelClose   = document.getElementById("musicModePanelClose");
+
+function syncMusicModeTrigger(){
+  const meta = MUSIC_MODE_META[modeSelect.value] || MUSIC_MODE_META.regular;
+  musicModeTriggerIcon.textContent = meta.icon;
+  musicModeTriggerName.textContent = meta.name;
+  document.querySelectorAll(".music-mode-item").forEach(el=>{
+    el.classList.toggle("selected", el.dataset.mode === modeSelect.value);
+  });
+}
+function openMusicModePanel(){
+  syncMusicModeTrigger();
+  musicModeBackdrop.classList.add("show");
+  musicModePanel.classList.add("show");
+}
+function closeMusicModePanel(){
+  musicModeBackdrop.classList.remove("show");
+  musicModePanel.classList.remove("show");
+}
+musicModeTrigger.addEventListener("click", openMusicModePanel);
+musicModeTrigger.addEventListener("keydown", e=>{
+  if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openMusicModePanel(); }
+});
+musicModePanelClose.addEventListener("click", closeMusicModePanel);
+musicModeBackdrop.addEventListener("click", closeMusicModePanel);
+document.querySelectorAll(".music-mode-item").forEach(item=>{
+  item.addEventListener("click", ()=>{
+    const id = item.dataset.mode;
+    closeMusicModePanel();
+    if(modeSelect.value === id) return;
+    modeSelect.value = id;
+    modeSelect.dispatchEvent(new Event("change"));
+  });
+});
 
 function showModeChangeDialog(newMode, newModeName){
   const existing = document.getElementById("modeChangeDialog");
@@ -1725,6 +1947,7 @@ function showModeChangeDialog(newMode, newModeName){
       rampBarWrap.classList.remove("visible");
       rebuildBeatDots();
       modeLabelSpan.innerText = newModeName.toUpperCase().split(" ")[0];
+      syncMusicModeTrigger();
     },300);
   };
   dialog.querySelector("#mdcContinue").onclick = resumeSession;
@@ -1915,7 +2138,7 @@ window.MetVoice = {
   getBPM    : ()=>currentBPM,
   isRunning : ()=>isRunning,
   getMode   : ()=>modeSelect.value,
-  setMode   : id=>{ modeSelect.value=id; updateDynamicPanel(); },
+  setMode   : id=>{ modeSelect.value=id; updateDynamicPanel(); syncMusicModeTrigger(); },
   setInstr  : name=>{ if(instrumentSel) instrumentSel.value=name; currentInstrument=name; MetEngine.setInstrument(name); },
   tapTempo  : ()=>document.getElementById("tapBtn").click(),
   changeMode: ()=>{},
@@ -1927,6 +2150,7 @@ window.MetVoice = {
 updateDynamicPanel();
 rebuildCustomAccentUI();
 rebuildBeatDots();
+syncMusicModeTrigger();
 
 // ── FIX: read saved default BPM from Settings ───────────────────
 // Previously this always called setBPM(120) regardless of what the
