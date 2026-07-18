@@ -287,6 +287,8 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   .lower-control{padding:8px 12px;}
   .music-mode-trigger-name{max-width:96px;font-size:.72rem;}
   .music-mode-item-desc{font-size:.62rem;}
+  .music-picker-trigger-name{max-width:90px;font-size:.72rem;}
+  .row-control{flex-wrap:wrap;}
 }
 
 @media(max-height:780px){
@@ -342,6 +344,11 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   .row-icon{font-size:.8rem;width:18px;}
   .row-label{min-width:90px;gap:6px;}
   select{padding:3px 6px;font-size:.7rem;}
+  .music-picker-trigger{padding:4px 10px;font-size:.75rem;}
+  .music-picker-panel{max-height:min(60svh,380px);}
+  .music-picker-panel-header{padding:10px 14px 8px;}
+  .music-picker-item{padding:8px 12px;}
+  .music-picker-item-name{font-size:.76rem;}
   .measure-btn{width:22px;height:22px;font-size:.8rem;}
   .custom-accent-btn{width:24px;height:24px;font-size:.62rem;}
   .custom-accent-hint{font-size:.56rem;}
@@ -571,6 +578,104 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   .music-mode-panel.show{transform:translate(-50%,-50%);}
 }
 
+/* ── Custom Picker (Subdivisions / Accent Pattern / Instrument) ──
+   One shared, dynamically-populated panel reused by all three native
+   <select> elements (each stays in the DOM, hidden, as the single
+   source of truth — same "presentation layer only" technique as the
+   Mode picker above, so subdivisionSelect.onchange, accentPatternSelect
+   .onchange, and instrumentSel.onchange all keep working untouched).
+   Populated via JS instead of static markup because Instrument alone
+   has 18 options. Kept as its own class set (not reusing .music-mode-*)
+   so nothing about the already-working Mode picker is touched. ── */
+.music-select-hidden{ display:none; }
+
+.music-picker-trigger{
+  display:flex;align-items:center;gap:8px;
+  background:#131e17;border:1px solid rgba(46,204,113,.35);
+  color:#ddf5e8;padding:6px 14px;border-radius:32px;
+  font-size:.8rem;cursor:pointer;outline:none;
+  transition:border-color .2s,background .2s;
+  max-width:100%;
+}
+@media(hover:hover){.music-picker-trigger:hover{border-color:#2ecc71;background:#182a20;}}
+.music-picker-trigger-icon{font-size:.85rem;line-height:1;flex-shrink:0;font-family:monospace;}
+.music-picker-trigger-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;}
+.music-picker-trigger-chev{color:#6fffb0;font-size:.7rem;flex-shrink:0;}
+
+.music-picker-backdrop{
+  position:fixed;inset:0;z-index:1500;
+  background:rgba(0,0,0,.6);
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.music-picker-backdrop.show{opacity:1;pointer-events:all;}
+
+.music-picker-panel{
+  position:fixed;left:0;right:0;bottom:0;z-index:1501;
+  background:rgba(6,16,11,.98);
+  border:1px solid rgba(46,204,113,.25);border-bottom:none;
+  border-radius:28px 28px 0 0;
+  max-width:560px;margin:0 auto;
+  max-height:min(72svh,520px);
+  display:flex;flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(0.22,1,0.36,1);
+  box-shadow:0 -20px 50px rgba(0,0,0,.5);
+  pointer-events:none;
+}
+.music-picker-panel.show{transform:translateY(0);pointer-events:all;}
+
+.music-picker-panel-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 12px;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.music-picker-panel-title{font-size:.95rem;font-weight:700;color:#8affc2;letter-spacing:.3px;}
+.music-picker-panel-close{
+  width:26px;height:26px;border-radius:50%;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;flex-shrink:0;
+}
+
+.music-picker-panel-list{
+  flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:8px;
+}
+.music-picker-panel-list::-webkit-scrollbar{display:none;}
+
+.music-picker-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  cursor:pointer;transition:background .2s,border-color .2s;
+}
+@media(hover:hover){.music-picker-item:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);}}
+.music-picker-item.selected{background:rgba(46,204,113,.1);border-color:rgba(46,204,113,.4);}
+.music-picker-item-icon{
+  font-size:1.05rem;min-width:34px;text-align:center;flex-shrink:0;
+  font-family:monospace;color:#9effcf;
+}
+.music-picker-item-info{flex:1;min-width:0;}
+.music-picker-item-name{font-size:.82rem;color:#fff;font-weight:600;}
+.music-picker-item.selected .music-picker-item-name{color:#2ecc71;}
+.music-picker-item-check{font-size:.85rem;color:#2ecc71;flex-shrink:0;opacity:0;transition:opacity .2s;}
+.music-picker-item.selected .music-picker-item-check{opacity:1;}
+
+@media(min-width:500px){
+  .music-picker-backdrop{background:rgba(0,0,0,.7);}
+  .music-picker-panel{
+    left:50%;right:auto;bottom:auto;top:50%;
+    transform:translate(-50%,-42%);
+    width:min(420px,90vw);
+    border-radius:28px;
+    max-height:80vh;
+  }
+  .music-picker-panel.show{transform:translate(-50%,-50%);}
+}
+
 /* ── Diary prompt — now a section inside the full-screen summary,
    not a separate floating toast. This removes the entire class of
    bug where the toast and the summary card competed for the same
@@ -712,6 +817,19 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
   </div>
 </div>
 
+<!-- Shared picker panel — reused by Subdivisions / Accent Pattern /
+     Instrument. Populated by JS per-tap since Instrument alone has
+     18 options; keeping this generic avoids hardcoding 29 items across
+     three near-identical static panels. -->
+<div class="music-picker-backdrop" id="musicPickerBackdrop"></div>
+<div class="music-picker-panel" id="musicPickerPanel">
+  <div class="music-picker-panel-header">
+    <span class="music-picker-panel-title" id="musicPickerTitle">Select</span>
+    <div class="music-picker-panel-close" id="musicPickerClose">✕</div>
+  </div>
+  <div class="music-picker-panel-list" id="musicPickerList"></div>
+</div>
+
 <div class="main-mode">
 
 <div class="main-mode-scroll">
@@ -804,7 +922,12 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
     <div class="settings-row">
       <div class="row-label"><span class="row-icon">🎯</span><span class="row-text">Subdivisions</span></div>
       <div class="row-control">
-        <select id="subdivisionSelect">
+        <div class="music-picker-trigger" id="subdivisionTrigger" role="button" tabindex="0" aria-haspopup="true">
+          <span class="music-picker-trigger-icon" id="subdivisionTriggerIcon">1/4</span>
+          <span class="music-picker-trigger-name" id="subdivisionTriggerName">Quarter notes</span>
+          <span class="music-picker-trigger-chev">▾</span>
+        </div>
+        <select id="subdivisionSelect" class="music-select-hidden">
           <option value="1">Quarter notes (1/4)</option>
           <option value="2">Eighth notes (1/8)</option>
           <option value="3">Triplets (3:1)</option>
@@ -817,7 +940,12 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
     <div class="settings-row">
       <div class="row-label"><span class="row-icon">⚡</span><span class="row-text">Accent Pattern</span></div>
       <div class="row-control">
-        <select id="accentPatternSelect">
+        <div class="music-picker-trigger" id="accentTrigger" role="button" tabindex="0" aria-haspopup="true">
+          <span class="music-picker-trigger-icon" id="accentTriggerIcon">➖</span>
+          <span class="music-picker-trigger-name" id="accentTriggerName">Off</span>
+          <span class="music-picker-trigger-chev">▾</span>
+        </div>
+        <select id="accentPatternSelect" class="music-select-hidden">
           <option value="off">Off</option>
           <option value="every2">Every 2nd beat</option>
           <option value="every3">Every 3rd beat</option>
@@ -847,7 +975,12 @@ input[type="number"]{background:#131e17;border:1px solid rgba(46,204,113,.35);co
     <div class="settings-row">
       <div class="row-label"><span class="row-icon">🥁</span><span class="row-text">Instrument</span></div>
       <div class="row-control">
-        <select id="instrumentSelect">
+        <div class="music-picker-trigger" id="instrumentTrigger" role="button" tabindex="0" aria-haspopup="true">
+          <span class="music-picker-trigger-icon" id="instrumentTriggerIcon">🪵</span>
+          <span class="music-picker-trigger-name" id="instrumentTriggerName">Woodblock</span>
+          <span class="music-picker-trigger-chev">▾</span>
+        </div>
+        <select id="instrumentSelect" class="music-select-hidden">
           <option value="woodblock">Woodblock</option>
           <option value="cowbell">Cowbell</option>
           <option value="clave">Clave</option>
@@ -1905,6 +2038,112 @@ document.querySelectorAll(".music-mode-item").forEach(item=>{
   });
 });
 
+// ═══════════════════════════════════════════════
+//  CUSTOM PICKER — Subdivisions / Accent Pattern / Instrument
+//  Same presentation-only technique as the Mode picker above: each
+//  native <select> stays in the DOM (hidden) as the single source of
+//  truth, so subdivisionSelect.onchange / accentPatternSelect.onchange
+//  / instrumentSel.onchange all keep firing exactly as before — tapping
+//  a card just sets .value and dispatches "change". One shared panel is
+//  reused and repopulated per-tap (Instrument alone has 18 options).
+// ═══════════════════════════════════════════════
+const MUSIC_PICKERS = {
+  subdivision: {
+    selectId: "subdivisionSelect", triggerId: "subdivisionTrigger", title: "Select Subdivision",
+    items: [
+      { value:"1", icon:"1/4",  name:"Quarter notes" },
+      { value:"2", icon:"1/8",  name:"Eighth notes" },
+      { value:"3", icon:"3:1",  name:"Triplets" },
+      { value:"4", icon:"1/16", name:"Sixteenth notes" },
+      { value:"5", icon:"5:1",  name:"Quintuplets" },
+      { value:"6", icon:"6:1",  name:"Sextuplets" },
+    ],
+  },
+  accent: {
+    selectId: "accentPatternSelect", triggerId: "accentTrigger", title: "Select Accent Pattern",
+    items: [
+      { value:"off",    icon:"➖", name:"Off" },
+      { value:"every2", icon:"2️⃣", name:"Every 2nd beat" },
+      { value:"every3", icon:"3️⃣", name:"Every 3rd beat" },
+      { value:"every4", icon:"4️⃣", name:"Every 4th beat" },
+      { value:"custom", icon:"🎛️", name:"Custom (measure)" },
+    ],
+  },
+  instrument: {
+    selectId: "instrumentSelect", triggerId: "instrumentTrigger", title: "Select Instrument",
+    items: [
+      { value:"woodblock",   icon:"🪵", name:"Woodblock" },
+      { value:"cowbell",     icon:"🐄", name:"Cowbell" },
+      { value:"clave",       icon:"🥢", name:"Clave" },
+      { value:"hihat",       icon:"🎩", name:"Hi-hat" },
+      { value:"tambourine",  icon:"🪇", name:"Tambourine" },
+      { value:"shaker",      icon:"🧂", name:"Shaker" },
+      { value:"bongo",       icon:"🥁", name:"Bongo" },
+      { value:"snap",        icon:"🫰", name:"Snap" },
+      { value:"rimshot",     icon:"⚡", name:"Rimshot" },
+      { value:"clap",        icon:"👏", name:"Clap" },
+      { value:"bell",        icon:"🔔", name:"Bell" },
+      { value:"cymbal",      icon:"✨", name:"Cymbal" },
+      { value:"servicebell", icon:"🛎️", name:"Service Bell" },
+      { value:"vibraslap",   icon:"〰️", name:"Vibraslap" },
+      { value:"wood",        icon:"🌳", name:"Wood" },
+      { value:"drumkit",     icon:"🪘", name:"Drum Kit" },
+      { value:"techno",      icon:"🤖", name:"Techno Beep" },
+      { value:"clock",       icon:"⏰", name:"Clock" },
+    ],
+  },
+};
+const musicPickerBackdrop = document.getElementById("musicPickerBackdrop");
+const musicPickerPanel    = document.getElementById("musicPickerPanel");
+const musicPickerTitle    = document.getElementById("musicPickerTitle");
+const musicPickerList     = document.getElementById("musicPickerList");
+const musicPickerClose    = document.getElementById("musicPickerClose");
+
+function syncMusicPickerTrigger(key){
+  const cfg = MUSIC_PICKERS[key];
+  const sel = document.getElementById(cfg.selectId);
+  const item = cfg.items.find(it=>it.value===sel.value) || cfg.items[0];
+  document.getElementById(cfg.triggerId+"Icon").textContent = item.icon;
+  document.getElementById(cfg.triggerId+"Name").textContent = item.name;
+}
+function closeMusicPicker(){
+  musicPickerBackdrop.classList.remove("show");
+  musicPickerPanel.classList.remove("show");
+}
+function openMusicPicker(key){
+  const cfg = MUSIC_PICKERS[key];
+  const sel = document.getElementById(cfg.selectId);
+  musicPickerTitle.textContent = cfg.title;
+  musicPickerList.innerHTML = cfg.items.map(it=>`
+    <div class="music-picker-item${it.value===sel.value?" selected":""}" data-value="${it.value}">
+      <div class="music-picker-item-icon">${it.icon}</div>
+      <div class="music-picker-item-info"><div class="music-picker-item-name">${it.name}</div></div>
+      <div class="music-picker-item-check">✓</div>
+    </div>`).join("");
+  musicPickerList.querySelectorAll(".music-picker-item").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const val = el.dataset.value;
+      closeMusicPicker();
+      if(sel.value !== val){
+        sel.value = val;
+        sel.dispatchEvent(new Event("change"));
+      }
+      syncMusicPickerTrigger(key);
+    });
+  });
+  musicPickerBackdrop.classList.add("show");
+  musicPickerPanel.classList.add("show");
+}
+musicPickerClose.addEventListener("click", closeMusicPicker);
+musicPickerBackdrop.addEventListener("click", closeMusicPicker);
+Object.keys(MUSIC_PICKERS).forEach(key=>{
+  const trigger = document.getElementById(MUSIC_PICKERS[key].triggerId);
+  trigger.addEventListener("click", ()=>openMusicPicker(key));
+  trigger.addEventListener("keydown", e=>{
+    if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openMusicPicker(key); }
+  });
+});
+
 function showModeChangeDialog(newMode, newModeName){
   const existing = document.getElementById("modeChangeDialog");
   if(existing) existing.remove();
@@ -2180,6 +2419,9 @@ if(typeof MetStorage !== "undefined"){
   MetEngine.setVolume(volume);
 }
 setBPM(_initialBPM);
+syncMusicPickerTrigger("subdivision");
+syncMusicPickerTrigger("accent");
+syncMusicPickerTrigger("instrument");
 
 if(typeof MetOnboarding !== "undefined"){
   const _tourForce = new URLSearchParams(window.location.search).get("replayTour")==="1";

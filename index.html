@@ -299,8 +299,10 @@
   resize();
   draw();
 
-  /* First shooting star after 2s, then random schedule */
-  setTimeout(() => { spawnShoot(); scheduleShoot(); }, 2000);
+  /* First shooting star after 0.8s — well before the 1800ms auto-navigate
+     (WAIT below) so it actually has visible runway before the page fades
+     out, instead of spawning after the transition has already begun. */
+  setTimeout(() => { spawnShoot(); scheduleShoot(); }, 800);
 
 })();
 

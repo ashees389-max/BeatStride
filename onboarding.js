@@ -36,7 +36,7 @@ const MetOnboarding = (function () {
       { targetId: "bpmMinus5",    title: "Decrease BPM",         body: "Tap or say",    cmd: '"Pace Down"',         pos: "right" },
       { targetId: "tapBtn",       title: "Tap tempo",            body: "Tap to the beat or say", cmd: '"Tap"',       pos: "above" },
       { targetId: "musicModeTrigger", title: "Change mode",      body: "Tap or say",    cmd: '"Show Modes"',        pos: "above" },
-      { targetId: "instrumentSelect", title: "Change instrument",body: "Tap or say",    cmd: '"Select Instrument Woodblock"', pos: "above" },
+      { targetId: "instrumentTrigger", title: "Change instrument",body: "Tap or say",    cmd: '"Select Instrument Woodblock"', pos: "above" },
       { targetId: "dashIconBtn",  title: "Your progress & data", body: "Tap or say",    cmd: '"Open Dashboard"',    pos: "below" },
       { targetId: "vcHelpBtn",    title: "See all commands",     body: "Tap this button anytime for the full command list.", cmd: null, pos: "left", isFinal: true },
     ],
