@@ -693,8 +693,8 @@ const MetEngine = (function () {
    * Call this immediately after setBPM() during ramp transitions.
    */
   function realignAfterBPMChange() {
-    if (!_audioCtx || !_running) return;
-    const now      = _audioCtx.currentTime;
+    if (!_ctx || !_isRunning) return;
+    const now      = _ctx.currentTime;
     const clickDur = (60.0 / _bpm) / _subdivisions;
     // Reset the start anchor so that the current beat index lands at now
     _sessionStartAudioTime = now - _globalBeatIdx * clickDur;

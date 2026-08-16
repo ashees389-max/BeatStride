@@ -21,24 +21,21 @@ const MetOnboarding = (function () {
   // ── Tour steps per app ───────────────────────────────────────────────────
   const STEPS = {
     athletic: [
-      { targetId: "startBtn",     title: "Start your session",   body: "Tap or say",    cmd: '"Power Up"',       pos: "above" },
-      { targetId: "bP5",          title: "Increase pace",        body: "Tap or say",    cmd: '"Faster"',         pos: "left"  },
-      { targetId: "bM5",          title: "Decrease pace",        body: "Tap or say",    cmd: '"Pace Down"',      pos: "right" },
-      { targetId: "skipBtn",      title: "Skip current set",     body: "Tap or say",    cmd: '"Skip Set"',       pos: "above" },
-      { targetId: "summaryBtn",   title: "View session summary", body: "Tap or say",    cmd: '"Show Summary"',   pos: "above" },
-      { targetId: "dashIconBtn",  title: "Your progress & data", body: "Tap or say",    cmd: '"Open Dashboard"', pos: "below" },
-      { targetId: null,           title: "Voice Commands",       body: "Hold the 🎤 button below to speak a command. Say \"Hey Metro\" anytime in always-on mode.", cmd: null, pos: "center", isFinal: false },
-      { targetId: "vcHelpBtn",    title: "See all commands",     body: "Tap this button anytime for the full command list.", cmd: null, pos: "left", isFinal: true },
+      { targetId: "startBtn",     title: "Start your session",   body: "Tap",    cmd: null, pos: "above" },
+      { targetId: "bP5",          title: "Increase pace",        body: "Tap",    cmd: null, pos: "left"  },
+      { targetId: "bM5",          title: "Decrease pace",        body: "Tap",    cmd: null, pos: "right" },
+      { targetId: "skipBtn",      title: "Skip current set",     body: "Tap",    cmd: null, pos: "above" },
+      { targetId: "summaryBtn",   title: "View session summary", body: "Tap",    cmd: null, pos: "above" },
+      { targetId: "dashIconBtn",  title: "Your progress & data", body: "Tap",    cmd: null, pos: "below", isFinal: true },
     ],
     music: [
-      { targetId: "playPauseBtn", title: "Start the metronome",  body: "Tap or say",    cmd: '"Start Metronome"',   pos: "above" },
-      { targetId: "bpmPlus5",     title: "Increase BPM",         body: "Tap or say",    cmd: '"Faster"',            pos: "left"  },
-      { targetId: "bpmMinus5",    title: "Decrease BPM",         body: "Tap or say",    cmd: '"Pace Down"',         pos: "right" },
-      { targetId: "tapBtn",       title: "Tap tempo",            body: "Tap to the beat or say", cmd: '"Tap"',       pos: "above" },
-      { targetId: "musicModeTrigger", title: "Change mode",      body: "Tap or say",    cmd: '"Show Modes"',        pos: "above" },
-      { targetId: "instrumentTrigger", title: "Change instrument",body: "Tap or say",    cmd: '"Select Instrument Woodblock"', pos: "above" },
-      { targetId: "dashIconBtn",  title: "Your progress & data", body: "Tap or say",    cmd: '"Open Dashboard"',    pos: "below" },
-      { targetId: "vcHelpBtn",    title: "See all commands",     body: "Tap this button anytime for the full command list.", cmd: null, pos: "left", isFinal: true },
+      { targetId: "playPauseBtn", title: "Start the metronome",  body: "Tap",    cmd: null, pos: "above" },
+      { targetId: "bpmPlus5",     title: "Increase BPM",         body: "Tap",    cmd: null, pos: "left"  },
+      { targetId: "bpmMinus5",    title: "Decrease BPM",         body: "Tap",    cmd: null, pos: "right" },
+      { targetId: "tapBtn",       title: "Tap tempo",            body: "Tap to the beat", cmd: null, pos: "above" },
+      { targetId: "musicModeTrigger", title: "Change mode",      body: "Tap",    cmd: null, pos: "above" },
+      { targetId: "instrumentTrigger", title: "Change instrument",body: "Tap",   cmd: null, pos: "above" },
+      { targetId: "dashIconBtn",  title: "Your progress & data", body: "Tap",    cmd: null, pos: "below", isFinal: true },
     ],
   };
 

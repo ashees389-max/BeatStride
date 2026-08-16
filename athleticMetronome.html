@@ -492,6 +492,30 @@ function startBgKeepAlive(){
     wl.isIgnoringBatteryOptimizations().then(r=>{
       if(!r.ignored) wl.requestIgnoreBatteryOptimizations().catch(()=>{});
     }).catch(()=>{});
+    // Request exact-alarm permission (Android 12+) so scheduleRestEnd()'s
+    // setAlarmClock() can actually fire and wake the app when a rest period
+    // ends with the screen off — without it, rest-end silently falls back to
+    // the JS-only timer, which can't survive screen-off past ~30s.
+    // Live-checked every time (never cached) and only requested when actually
+    // missing, so this never re-prompts once the user has already granted it.
+    wl.isExactAlarmAllowed().then(r=>{
+      if(!r.allowed) wl.requestExactAlarmPermission().catch(()=>{});
+    }).catch(()=>{});
+    // One-time nudge for OEM "Autostart" / background-launch permission
+    // (Vivo, and similarly-locked-down MIUI/Oppo/etc. skins). This is a
+    // manufacturer-proprietary permission, NOT a standard Android one — there
+    // is no API to check whether it's already granted, unlike the two checks
+    // above. Without it, some OEMs silently block the AlarmManager-triggered
+    // BeatStrideTimerService from ever starting, so scheduleRestEnd()'s alarm
+    // gets accepted with no error but never actually fires — rest-end then
+    // depends entirely on the JS-timer fallback, which is not guaranteed to
+    // survive longer screen-off periods. Since grant state can't be checked,
+    // this is shown at most ONCE ever (persisted flag) rather than every
+    // session, to avoid the earlier "keeps asking" complaint.
+    if(typeof MetStorage!=="undefined" && !MetStorage.getSettings().autostart_prompt_shown){
+      MetStorage.updateSettings({autostart_prompt_shown:true});
+      wl.openAutoStartSettings().catch(()=>{});
+    }
     wl.acquire().catch(()=>{});
   }
 }

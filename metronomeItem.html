@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>BeatStride — Select Mode</title>
+  <title>BeatStride — Select Mode (Native Scroll)</title>
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
@@ -20,7 +20,7 @@
 
     /* ── Stage ── */
     .stage {
-      width:100%; height:100svh;
+      width:100%; height:100vh; height:100svh;
       position:relative;
       display:flex;
       flex-direction:column;
@@ -29,15 +29,13 @@
       overflow:hidden;
     }
 
-    /* ── Content group — keeps label + card + nav visually unified ── */
     .content-group {
       position:relative; z-index:10;
       display:flex;
       flex-direction:column;
       align-items:center;
-      width:100%;          /* ensures orbit-viewport gets full viewport width */
-      /* Slight upward nudge so label feels like a heading above the card */
-      margin-bottom: clamp(8px, 2svh, 20px);
+      width:100%;
+      margin-bottom: clamp(8px, 2vh, 20px); margin-bottom: clamp(8px, 2svh, 20px);
     }
 
     /* ── Deep space background ── */
@@ -52,10 +50,8 @@
       pointer-events:none; z-index:0;
     }
 
-    /* ── Star canvas ── */
     #canvas { position:absolute; inset:0; pointer-events:none; z-index:1; }
 
-    /* ── Orbital ring — subtle ellipse behind the planets ── */
     .orbit-ring {
       position:absolute;
       width: min(88vw, 520px);
@@ -71,7 +67,6 @@
       50%    { transform:scale(1.02); opacity:1;   }
     }
 
-    /* ── App label ── */
     .app-label {
       position:relative; z-index:10;
       color: rgba(255,255,255,0.55);
@@ -79,54 +74,66 @@
       font-size:0.55rem;
       letter-spacing:6px;
       text-transform:uppercase;
-      margin-bottom: clamp(8px,1.8svh,16px);
+      margin-bottom: clamp(8px,1.8vh,16px); margin-bottom: clamp(8px,1.8svh,16px);
       animation: fadeUp 1s 0.1s ease both;
     }
 
-    /* ── Orbit viewport — clips overflow ── */
-    .orbit-viewport {
+    /* ── Orbit wrap — positioning context for the scroller + edge fades ── */
+    .orbit-wrap {
       position:relative; z-index:10;
       width:100vw;
-      height: clamp(270px, 54svh, 390px);
-      overflow:hidden;
-      padding-top: 8px;
-      /* Fade edges so inactive planet dissolves gracefully */
-      -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 84%,
-        transparent 100%
-      );
-      mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 84%,
-        transparent 100%
-      );
+      height: clamp(270px, 54vh, 390px); height: clamp(270px, 54svh, 390px);
     }
 
-    /* ── Planet track — absolutely positioned, centred via CSS var ── */
-    .planet-track {
-      position:absolute;
-      top:50%;
-      /* 50vw = always true viewport centre, immune to parent flex shrinkage */
-      left:50vw;
-      transform: translateX(-50%) translateY(-50%);
+    /* ── Orbit viewport — NATIVE horizontal scroll-snap container ──
+       The slide and the release physics are now owned by the browser's native
+       scroller, which runs on the OS compositor thread — smooth even on weak
+       devices where a JS-driven transform would stall. */
+    .orbit-viewport {
+      position:absolute; inset:0;
       display:flex;
       align-items:center;
       gap: 24px;
-      transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
-      will-change: transform;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      overscroll-behavior-x: contain;   /* don't let overscroll bubble to the page */
+      -webkit-overflow-scrolling: touch; /* momentum scrolling on iOS WebView */
+      padding-top: 8px;                  /* headroom for the active card's float */
+      /* hide the scrollbar on every engine */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
+    .orbit-viewport::-webkit-scrollbar { display:none; }
+
+    /* While the finger (or a smooth-scroll) is moving the scroller, strip the
+       three per-frame GPU costs. backdrop-filter re-samples the moving starfield
+       every frame — the single worst-case killer — and the inactive card's blur
+       re-rasterizes as it scales. Restored ~140ms after scrolling stops. */
+    .orbit-viewport.is-scrolling .planet {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      filter: none !important;
+    }
+
+    /* ── Edge fades — painted OVER the scroller (not a mask on it) so the
+       scrolling content never has to render into an offscreen buffer. ── */
+    .edge-fade {
+      position:absolute; top:0; bottom:0;
+      width:16%;
+      pointer-events:none;
+      z-index:11;
+    }
+    .edge-left  { left:0;  background:linear-gradient(to right, #030810 0%, rgba(3,8,16,0) 100%); }
+    .edge-right { right:0; background:linear-gradient(to left,  #030810 0%, rgba(3,8,16,0) 100%); }
 
     /* ── Individual planet card ── */
     .planet {
       position:relative;
       flex-shrink:0;
+      scroll-snap-align: center;   /* each card snaps to the scroller's centre */
       width:  clamp(200px, 54vw, 320px);
-      height: clamp(265px, 52svh, 380px);
+      height: clamp(265px, 52vh, 380px); height: clamp(265px, 52svh, 380px);
       border-radius: clamp(24px,6vw,36px);
       text-decoration:none;
       display:flex;
@@ -134,54 +141,43 @@
       justify-content:flex-end;
       padding: clamp(20px,4vw,28px);
       overflow:hidden;
-      /* Transition: all orbital properties */
-      transition:
-        transform    0.55s cubic-bezier(0.4,0,0.2,1),
-        opacity      0.55s cubic-bezier(0.4,0,0.2,1),
-        filter       0.55s cubic-bezier(0.4,0,0.2,1),
-        box-shadow   0.55s cubic-bezier(0.4,0,0.2,1);
+      /* Scale + opacity are driven continuously from the scroll position in JS
+         (see updateScales) so the card grows AS it approaches centre and tracks
+         the finger — no hold-then-pop. Deliberately NO transition here: a
+         transition would lag behind the finger; the per-frame scroll update is
+         what makes it smooth. */
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
       cursor:pointer;
       user-select:none;
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* Active planet */
-    .planet.is-active {
-      transform: scale(1);
-      opacity:1;
-      filter:blur(0px);
-      pointer-events:all;
-    }
-
-    /* Inactive planet — smaller, dimmer, blurred */
-    .planet.is-inactive {
-      transform: scale(0.60);
-      opacity:0.28;
-      filter: blur(2.5px);
-      pointer-events:all; /* still tappable to switch */
-    }
+    /* is-active / is-inactive now carry only state that ISN'T size/opacity
+       (those are set continuously by JS). Kept here: the rest-blur on the off
+       card, tap targets, and the active glow + CTA via selectors elsewhere. */
+    .planet.is-active   { pointer-events:all; }
+    .planet.is-inactive { filter: blur(2.5px); pointer-events:all; }
 
     /* ── Athletic planet — Mars warmth ── */
     .planet-athletic {
       background:
         radial-gradient(ellipse 90% 60% at 40% 20%,
           rgba(180,70,40,0.18) 0%, transparent 60%),
-        linear-gradient(
-          155deg,
+        linear-gradient(155deg,
           rgba(255,255,255,0.095) 0%,
           rgba(255,255,255,0.040) 50%,
-          rgba(255,255,255,0.012) 100%
-        );
+          rgba(255,255,255,0.012) 100%);
       border: 1px solid rgba(255,255,255,0.09);
       box-shadow:
         inset 0 1.5px 0 rgba(255,255,255,0.16),
         inset 0 -1px  0 rgba(255,255,255,0.03),
         0 0 0 0.5px rgba(255,255,255,0.04),
         0 40px 80px rgba(0,0,0,0.6);
-      backdrop-filter: blur(28px) saturate(1.3);
-      -webkit-backdrop-filter: blur(28px) saturate(1.3);
+      backdrop-filter: blur(16px) saturate(1.3);
+      -webkit-backdrop-filter: blur(16px) saturate(1.3);
     }
-    /* Active glow for athletic */
     .planet-athletic.is-active {
       box-shadow:
         inset 0 1.5px 0 rgba(255,255,255,0.18),
@@ -197,22 +193,19 @@
       background:
         radial-gradient(ellipse 90% 60% at 60% 20%,
           rgba(50,80,200,0.18) 0%, transparent 60%),
-        linear-gradient(
-          155deg,
+        linear-gradient(155deg,
           rgba(255,255,255,0.095) 0%,
           rgba(255,255,255,0.040) 50%,
-          rgba(255,255,255,0.012) 100%
-        );
+          rgba(255,255,255,0.012) 100%);
       border: 1px solid rgba(255,255,255,0.09);
       box-shadow:
         inset 0 1.5px 0 rgba(255,255,255,0.16),
         inset 0 -1px  0 rgba(255,255,255,0.03),
         0 0 0 0.5px rgba(255,255,255,0.04),
         0 40px 80px rgba(0,0,0,0.6);
-      backdrop-filter: blur(28px) saturate(1.3);
-      -webkit-backdrop-filter: blur(28px) saturate(1.3);
+      backdrop-filter: blur(16px) saturate(1.3);
+      -webkit-backdrop-filter: blur(16px) saturate(1.3);
     }
-    /* Active glow for music */
     .planet-music.is-active {
       box-shadow:
         inset 0 1.5px 0 rgba(255,255,255,0.18),
@@ -224,224 +217,107 @@
       border-color: rgba(255,255,255,0.10);
     }
 
-    /* ── Planet ambient SVG (top-right area) ── */
-    .planet-bg {
-      position:absolute;
-      top:0; right:0;
-      width:62%; height:65%;
-      pointer-events:none;
-      opacity:0.075;
-    }
+    .planet-bg { position:absolute; top:0; right:0; width:62%; height:65%; pointer-events:none; opacity:0.075; }
 
-    /* ── Planet inner glow — mode-specific ── */
     .planet-glow {
-      position:absolute;
-      top:-30%; left:-20%;
-      width:100%; height:80%;
-      border-radius:50%;
-      pointer-events:none;
-      transition: opacity 0.55s ease;
+      position:absolute; top:-30%; left:-20%;
+      width:100%; height:80%; border-radius:50%;
+      pointer-events:none; transition: opacity 0.34s ease;
     }
-    .planet-athletic .planet-glow {
-      background: radial-gradient(
-        ellipse at 40% 50%,
-        rgba(220,85,50,0.12) 0%,
-        transparent 65%
-      );
-    }
-    .planet-music .planet-glow {
-      background: radial-gradient(
-        ellipse at 60% 50%,
-        rgba(60,100,220,0.12) 0%,
-        transparent 65%
-      );
-    }
+    .planet-athletic .planet-glow { background: radial-gradient(ellipse at 40% 50%, rgba(220,85,50,0.12) 0%, transparent 65%); }
+    .planet-music    .planet-glow { background: radial-gradient(ellipse at 60% 50%, rgba(60,100,220,0.12) 0%, transparent 65%); }
 
-    /* ── Mode tag ── */
     .planet-tag {
       font-family:'Segoe UI','Helvetica Neue',system-ui,sans-serif;
-      font-size:0.54rem;
-      letter-spacing:4px;
-      color:rgba(255,255,255,0.32);
-      text-transform:uppercase;
-      margin-bottom:8px;
-      position:relative; z-index:2;
+      font-size:0.54rem; letter-spacing:4px;
+      color:rgba(255,255,255,0.32); text-transform:uppercase;
+      margin-bottom:8px; position:relative; z-index:2;
     }
-
-    /* ── Mode name ── */
     .planet-name {
-      color:#ffffff;
-      font-size: clamp(2.2rem, 7vw, 3rem);
-      font-weight:700;
-      letter-spacing:-0.5px;
-      line-height:1;
-      position:relative; z-index:2;
-      text-shadow:0 2px 8px rgba(0,0,0,0.45);
-      margin-bottom:12px;
+      color:#ffffff; font-size: clamp(2.2rem, 7vw, 3rem); font-weight:700;
+      letter-spacing:-0.5px; line-height:1; position:relative; z-index:2;
+      text-shadow:0 2px 8px rgba(0,0,0,0.45); margin-bottom:12px;
     }
-
-    /* ── Feature list ── */
     .planet-features {
-      display:flex;
-      flex-direction:column;
-      gap:5px;
-      position:relative; z-index:2;
-      margin-bottom:4px;
-      /* Leave room for the arrow button in the bottom-right corner */
-      padding-right: 44px;
+      display:flex; flex-direction:column; gap:5px;
+      position:relative; z-index:2; margin-bottom:4px; padding-right: 44px;
     }
     .planet-feature {
       font-family:'Segoe UI','Helvetica Neue',system-ui,sans-serif;
-      font-size:0.6rem;
-      letter-spacing:1.5px;
-      color:rgba(255,255,255,0.26);
-      text-transform:uppercase;
-      display:flex;
-      align-items:flex-start;
-      gap:7px;
-      line-height:1.4;
-      /* Allow wrapping on very narrow cards */
-      white-space:normal;
-      word-break:break-word;
+      font-size:0.6rem; letter-spacing:1.5px; color:rgba(255,255,255,0.26);
+      text-transform:uppercase; display:flex; align-items:flex-start; gap:7px;
+      line-height:1.4; white-space:normal; word-break:break-word;
     }
     .planet-feature::before {
-      content:"";
-      width:3px; height:3px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.28);
-      flex-shrink:0;
-      margin-top:4px;
+      content:""; width:3px; height:3px; border-radius:50%;
+      background:rgba(255,255,255,0.28); flex-shrink:0; margin-top:4px;
     }
 
-    /* ── Enter CTA (only on active planet) ── */
     .planet-cta {
-      position:absolute;
-      bottom:18px; right:18px;
-      z-index:2;
-      width:30px; height:30px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.08);
-      border:1px solid rgba(255,255,255,0.14);
+      position:absolute; bottom:18px; right:18px; z-index:2;
+      width:30px; height:30px; border-radius:50%;
+      background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
       display:flex;align-items:center;justify-content:center;
-      color:rgba(255,255,255,0.6);
-      font-size:0.8rem;
-      transition: opacity 0.3s;
+      color:rgba(255,255,255,0.6); font-size:0.8rem; transition: opacity 0.3s;
     }
     .planet.is-inactive .planet-cta { opacity:0; }
 
     /* ── Navigation arrows ── */
     .nav-row {
       position:relative; z-index:10;
-      display:flex;
-      align-items:center;
+      display:flex; align-items:center;
       gap: clamp(28px,10vw,56px);
-      margin-top: clamp(14px,3svh,28px);
+      margin-top: clamp(14px,3vh,28px); margin-top: clamp(14px,3svh,28px);
       animation: fadeUp 0.7s 0.5s ease both;
     }
     .nav-btn {
-      width:38px; height:38px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.10);
-      display:flex;align-items:center;justify-content:center;
-      cursor:pointer;
-      color:rgba(255,255,255,0.45);
-      font-size:1rem;
+      width:38px; height:38px; border-radius:50%;
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10);
+      display:flex;align-items:center;justify-content:center; cursor:pointer;
+      color:rgba(255,255,255,0.45); font-size:1rem;
       transition:background 0.2s, opacity 0.2s;
-      -webkit-tap-highlight-color:transparent;
-      user-select:none;
+      -webkit-tap-highlight-color:transparent; user-select:none;
     }
     .nav-btn:active { background:rgba(255,255,255,0.14); }
     .nav-btn.hidden { opacity:0; pointer-events:none; }
-    @media(hover:hover){
-      .nav-btn:hover { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.8); }
-    }
+    @media(hover:hover){ .nav-btn:hover { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.8); } }
 
-    /* Mode indicators — two dots ── */
-    .nav-dots {
-      display:flex; gap:8px; align-items:center;
-    }
+    .nav-dots { display:flex; gap:8px; align-items:center; }
     .nav-dot {
-      width:5px; height:5px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.2);
-      transition: background 0.35s, transform 0.35s;
+      width:5px; height:5px; border-radius:50%;
+      background:rgba(255,255,255,0.2); transition: background 0.35s, transform 0.35s;
     }
-    .nav-dot.active {
-      background:rgba(255,255,255,0.75);
-      transform:scale(1.3);
-    }
+    .nav-dot.active { background:rgba(255,255,255,0.75); transform:scale(1.3); }
 
-    /* ── Dashboard link ── */
     .dash-link {
-      position:relative; z-index:10;
-      margin-top: clamp(12px,2.5svh,22px);
+      position:relative; z-index:10; margin-top: clamp(12px,2.5vh,22px); margin-top: clamp(12px,2.5svh,22px);
       color:rgba(255,255,255,0.45);
       font-family:'Segoe UI','Helvetica Neue',system-ui,sans-serif;
-      font-size:0.56rem;
-      letter-spacing:3px;
-      text-transform:uppercase;
-      text-decoration:none;
-      transition:color 0.2s;
+      font-size:0.56rem; letter-spacing:3px; text-transform:uppercase;
+      text-decoration:none; transition:color 0.2s;
       animation: fadeUp 0.7s 0.7s ease both;
     }
-    @media(hover:hover){ .dash-link:hover { color:rgba(255,255,255,0.45); } }
 
-    /* ── Shared animations ── */
-    @keyframes fadeUp {
-      from { opacity:0; transform:translateY(12px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
     .stage.out { animation: stageOut 0.42s ease forwards; }
     @keyframes stageOut { to { opacity:0; } }
 
-    /* ── Floating motion on active planet ── */
-    .planet.is-active {
-      animation: planetFloat 7s ease-in-out infinite;
-    }
+    /* Floating motion on the active card (delayed so it never fights the
+       scale-in transition). */
+    .planet.is-active { animation: planetFloat 7s ease-in-out 0.4s infinite; }
+    /* Float uses the individual `translate` property (not `transform`) so it
+       composes with the JS-set `transform: scale()` instead of overwriting it.
+       Old WebViews without `translate` simply skip the bob — no conflict. */
     @keyframes planetFloat {
-      0%,100%{ transform:scale(1) translateY(0); }
-      50%    { transform:scale(1) translateY(-6px); }
+      0%,100%{ translate: 0 0; }
+      50%    { translate: 0 -6px; }
     }
-    /* Inactive doesn't float — it just sits smaller */
     .planet.is-inactive { animation:none; }
 
-    /* ── Entry animations ── */
-    .planet-athletic {
-      animation: entryA 0.9s 0.2s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    .planet-music {
-      animation: entryB 0.9s 0.35s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    @keyframes entryA {
-      from { opacity:0; transform:scale(0.88) translateY(30px); }
-      to   { opacity:1; transform:scale(1)    translateY(0); }
-    }
-    @keyframes entryB {
-      from { opacity:0; transform:scale(0.62) translateY(20px); }
-      to   { opacity:0.28; transform:scale(0.60) translateY(0); }
-    }
-    /* Override entry for when music is active at load */
-    .planet-music.load-active {
-      animation: entryActive 0.9s 0.2s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    .planet-athletic.load-inactive {
-      animation: entryInactive 0.9s 0.35s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    @keyframes entryActive {
-      from { opacity:0; transform:scale(0.88) translateY(30px); }
-      to   { opacity:1; transform:scale(1)    translateY(0); }
-    }
-    @keyframes entryInactive {
-      from { opacity:0; transform:scale(0.62) translateY(20px); }
-      to   { opacity:0.28; transform:scale(0.60) translateY(0); }
-    }
-
-    /* ── Responsive: short landscape phones ── */
     @media(max-height:500px){
       .content-group { margin-bottom:0; }
-      .orbit-viewport { height:clamp(200px,48svh,250px); }
-      .planet { height:clamp(190px,44svh,240px); }
+      .orbit-wrap { height:clamp(200px,48vh,250px); height:clamp(200px,48svh,250px); }
+      .planet { height:clamp(190px,44vh,240px); height:clamp(190px,44svh,240px); }
       .planet-name { font-size:1.8rem; margin-bottom:6px; }
       .planet-features { gap:2px; }
       .planet-feature { font-size:0.52rem; }
@@ -449,8 +325,6 @@
       .nav-row { margin-top:8px; }
       .dash-link { margin-top:6px; }
     }
-
-    /* ── Very narrow — Galaxy Z Fold5 (344px) ── */
     @media(max-width:350px){
       .planet { width:clamp(180px,52vw,210px); padding: clamp(16px,4vw,20px); }
       .planet-name { font-size:1.9rem; }
@@ -463,43 +337,28 @@
 
 <div class="stage" id="stage">
 
-  <!-- Star canvas -->
   <canvas id="canvas"></canvas>
-
-  <!-- Orbital ring — very subtle -->
   <div class="orbit-ring"></div>
 
-  <!-- Content group: label + orbit + nav unified -->
   <div class="content-group">
 
-  <!-- App label -->
   <p class="app-label">Select your mode</p>
 
-  <!-- Orbit viewport -->
-  <div class="orbit-viewport" id="orbitViewport">
-    <div class="planet-track" id="planetTrack">
+  <div class="orbit-wrap">
+    <div class="orbit-viewport" id="orbitViewport">
 
-      <!-- ATHLETIC PLANET -->
-      <div class="planet planet-athletic is-active" id="planetA">
+      <!-- ATHLETIC -->
+      <div class="planet planet-athletic is-active" id="planetA" data-mode="athletic">
         <div class="planet-glow"></div>
-
-        <!-- Ambient waveform -->
         <svg class="planet-bg" viewBox="0 0 240 200" preserveAspectRatio="xMidYMid meet">
-          <path fill="none" stroke="white" stroke-width="1.4"
-            stroke-linecap="round" stroke-linejoin="round"
-            d="M0,100 L24,100 L34,46 L44,154 L54,100
-               L82,100 L92,42 L102,158 L112,100
-               L140,100 L150,48 L160,152 L170,100
-               L198,100 L208,44 L218,156 L228,100 L240,100"/>
-          <path fill="none" stroke="white" stroke-width="0.7"
-            stroke-linecap="round" opacity="0.4"
-            d="M0,100 L20,100 L28,66 L36,134 L44,100
-               L66,100 L74,60 L82,140 L90,100
-               L112,100 L120,64 L128,136 L136,100
-               L158,100 L166,62 L174,138 L182,100
+          <path fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"
+            d="M0,100 L24,100 L34,46 L44,154 L54,100 L82,100 L92,42 L102,158 L112,100
+               L140,100 L150,48 L160,152 L170,100 L198,100 L208,44 L218,156 L228,100 L240,100"/>
+          <path fill="none" stroke="white" stroke-width="0.7" stroke-linecap="round" opacity="0.4"
+            d="M0,100 L20,100 L28,66 L36,134 L44,100 L66,100 L74,60 L82,140 L90,100
+               L112,100 L120,64 L128,136 L136,100 L158,100 L166,62 L174,138 L182,100
                L204,100 L212,60 L220,140 L228,100 L240,100"/>
         </svg>
-
         <span class="planet-tag">Athletic Mode</span>
         <h2 class="planet-name">Athletic</h2>
         <div class="planet-features">
@@ -510,29 +369,22 @@
         <div class="planet-cta">→</div>
       </div>
 
-      <!-- MUSIC PLANET -->
-      <div class="planet planet-music is-inactive" id="planetM">
+      <!-- MUSIC -->
+      <div class="planet planet-music is-inactive" id="planetM" data-mode="music">
         <div class="planet-glow"></div>
-
-        <!-- Ambient soundwave -->
         <svg class="planet-bg" viewBox="0 0 240 200" preserveAspectRatio="xMidYMid meet">
           <path fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round"
-            d="M0,100 Q20,54 40,100 Q60,146 80,100
-               Q100,54 120,100 Q140,146 160,100
+            d="M0,100 Q20,54 40,100 Q60,146 80,100 Q100,54 120,100 Q140,146 160,100
                Q180,54 200,100 Q220,146 240,100"/>
-          <path fill="none" stroke="white" stroke-width="0.7"
-            stroke-linecap="round" opacity="0.38"
-            d="M0,100 Q16,70 32,100 Q48,130 64,100
-               Q80,70 96,100 Q112,130 128,100
-               Q144,70 160,100 Q176,130 192,100
-               Q208,70 224,100"/>
+          <path fill="none" stroke="white" stroke-width="0.7" stroke-linecap="round" opacity="0.38"
+            d="M0,100 Q16,70 32,100 Q48,130 64,100 Q80,70 96,100 Q112,130 128,100
+               Q144,70 160,100 Q176,130 192,100 Q208,70 224,100"/>
           <line x1="0" y1="72"  x2="240" y2="72"  stroke="white" stroke-width="0.5" opacity="0.15"/>
           <line x1="0" y1="84"  x2="240" y2="84"  stroke="white" stroke-width="0.5" opacity="0.15"/>
           <line x1="0" y1="96"  x2="240" y2="96"  stroke="white" stroke-width="0.5" opacity="0.15"/>
           <line x1="0" y1="108" x2="240" y2="108" stroke="white" stroke-width="0.5" opacity="0.15"/>
           <line x1="0" y1="120" x2="240" y2="120" stroke="white" stroke-width="0.5" opacity="0.15"/>
         </svg>
-
         <span class="planet-tag">Music Mode</span>
         <h2 class="planet-name">Music</h2>
         <div class="planet-features">
@@ -543,10 +395,12 @@
         <div class="planet-cta">→</div>
       </div>
 
-    </div><!-- /planet-track -->
-  </div><!-- /orbit-viewport -->
+    </div><!-- /orbit-viewport -->
 
-  <!-- Navigation row -->
+    <div class="edge-fade edge-left"></div>
+    <div class="edge-fade edge-right"></div>
+  </div><!-- /orbit-wrap -->
+
   <div class="nav-row">
     <div class="nav-btn hidden" id="navLeft">‹</div>
     <div class="nav-dots">
@@ -556,7 +410,6 @@
     <div class="nav-btn" id="navRight">›</div>
   </div>
 
-  <!-- Dashboard link -->
   <a href="dashboard.html" class="dash-link">My Progress →</a>
 
   </div><!-- /content-group -->
@@ -564,6 +417,10 @@
 </div><!-- /stage -->
 
 <script>
+// Shared with the starfield: true while the scroller is moving, so the starfield
+// pauses its redraw and hands the main thread to the (native) scroll.
+let motionActive = false;
+
 // ═══════════════════════════════════════════════════════════
 //  STAR FIELD
 // ═══════════════════════════════════════════════════════════
@@ -599,6 +456,8 @@
   }
 
   function draw(){
+    requestAnimationFrame(draw);
+    if(motionActive) return; // paused while the scroller is moving
     ctx.clearRect(0,0,W,H);
     for(const s of small){
       s.a+=s.da; if(s.a>0.53||s.a<0.06)s.da*=-1;
@@ -617,7 +476,6 @@
       ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
       ctx.fillStyle=`rgba(240,246,255,${s.a.toFixed(3)})`; ctx.fill();
     }
-    requestAnimationFrame(draw);
   }
 
   window.addEventListener("resize",resize);
@@ -625,44 +483,70 @@
 })();
 
 // ═══════════════════════════════════════════════════════════
-//  ORBITAL SELECTOR
+//  NATIVE SCROLL SELECTOR
 // ═══════════════════════════════════════════════════════════
 (function(){
-  const track    = document.getElementById("planetTrack");
+  const viewport = document.getElementById("orbitViewport");
   const pA       = document.getElementById("planetA");
   const pM       = document.getElementById("planetM");
   const navLeft  = document.getElementById("navLeft");
   const navRight = document.getElementById("navRight");
   const dotA     = document.getElementById("dotA");
   const dotM     = document.getElementById("dotM");
+  const cards    = [pA, pM];
 
-  let active         = "athletic";
-  let transitioning  = false;
-  let autoTimer      = null;
-  let userInteracted = false;
-  let planetW        = 0;  // real rendered width, set by ResizeObserver
-  const GAP          = 24; // px — matches CSS gap:24px
+  let active = "athletic";
 
-  // ── Calculate transform for centring ─────────────────────
-  // Track is at left:50vw = true viewport centre.
-  // translateX(-(pw/2)) → active planet centre = 50vw ✅
-  // translateX(-(pw+GAP+pw/2)) → music planet centre = 50vw ✅
-  function applyLayout(animate){
-    if(!animate){
-      track.style.transition = "none";
-    } else {
-      track.style.transition = "transform 0.55s cubic-bezier(0.4,0,0.2,1)";
+  // Side padding so the first and last card can each reach the scroller's
+  // centre. offsetWidth is the LAYOUT width (unaffected by the scale transform),
+  // which is what we want here.
+  function setPadding(){
+    const pad = Math.max(0, (viewport.clientWidth - pA.offsetWidth) / 2);
+    viewport.style.paddingLeft  = pad + "px";
+    viewport.style.paddingRight = pad + "px";
+  }
+
+  // Scroll a card to the horizontal centre of the scroller.
+  function centerCard(card, smooth){
+    const left = card.offsetLeft + card.offsetWidth / 2 - viewport.clientWidth / 2;
+    try {
+      viewport.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
+    } catch (e) {
+      viewport.scrollLeft = left; // very old WebViews: no options object
     }
+  }
 
-    const xOffset = planetW === 0
-      ? "-50%"                                           // fallback before measurement
-      : (active === "athletic"
-          ? `${-(planetW/2)}px`
-          : `${-(planetW + GAP + planetW/2)}px`);
+  // ── Continuous scale/opacity from scroll position ────────────────────────
+  // Instead of snapping the size when a card crosses centre, set each card's
+  // scale + opacity every frame from how far its centre is from the viewport
+  // centre. The card grows smoothly AS it nears the middle and shrinks as it
+  // leaves — it tracks the finger, with no hold-then-pop. offsetLeft/offsetWidth
+  // are layout values (unaffected by the scale transform), so measuring while
+  // scaling is stable and writes no layout — hence no thrash and it stays cheap
+  // even on weak hardware.
+  const MIN_SCALE = 0.60, MIN_OPACITY = 0.28;
+  let scaleRAF = 0;
+  function updateScales(){
+    scaleRAF = 0;
+    const step = Math.abs(pM.offsetLeft - pA.offsetLeft) || 1; // one card + gap
+    const vpCenter = viewport.scrollLeft + viewport.clientWidth / 2;
+    for(const c of cards){
+      const cCenter = c.offsetLeft + c.offsetWidth / 2;
+      let d = Math.abs(cCenter - vpCenter) / step; // 0 = centred, 1 = one away
+      if(d > 1) d = 1;
+      c.style.transform = "scale(" + (1 - (1 - MIN_SCALE)   * d).toFixed(4) + ")";
+      c.style.opacity   =            (1 - (1 - MIN_OPACITY) * d).toFixed(4);
+    }
+  }
+  // Coalesce the burst of scroll events into one update per frame.
+  function scheduleScales(){ if(!scaleRAF) scaleRAF = requestAnimationFrame(updateScales); }
 
-    track.style.transform = `translateX(${xOffset}) translateY(-50%)`;
-
-    if(active === "athletic"){
+  // Reflect the centred card in the classes, dots and arrows. Called once per
+  // snap by the IntersectionObserver — never per frame.
+  function setActive(mode){
+    if(mode === active) return;
+    active = mode;
+    if(mode === "athletic"){
       pA.classList.add("is-active");    pA.classList.remove("is-inactive");
       pM.classList.add("is-inactive");  pM.classList.remove("is-active");
       navLeft.classList.add("hidden");  navRight.classList.remove("hidden");
@@ -673,120 +557,70 @@
       navRight.classList.add("hidden"); navLeft.classList.remove("hidden");
       dotM.classList.add("active");     dotA.classList.remove("active");
     }
-
-    // Re-enable transition after instant repositioning
-    if(!animate){
-      requestAnimationFrame(()=>{
-        track.style.transition = "transform 0.55s cubic-bezier(0.4,0,0.2,1)";
-      });
-    }
   }
 
-  function switchTo(mode){
-    if(transitioning || mode === active) return;
-    transitioning = true;
-    active = mode;
-    // Remeasure using offsetWidth (transform-independent) before layout
-    const freshW = pA.offsetWidth;
-    if(freshW > 0) planetW = freshW;
-    applyLayout(true);
-    setTimeout(()=>{ transitioning = false; }, 580);
-  }
+  // A thin vertical band down the centre of the scroller. Whichever card
+  // overlaps that band is the active one. Works on every WebView that has
+  // IntersectionObserver (i.e. effectively all of them on the Play Store).
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.dataset.mode); });
+  }, { root: viewport, rootMargin: "0px -50% 0px -50%", threshold: 0 });
+  cards.forEach(c => io.observe(c));
 
-  function onInteract(){
-    userInteracted = true;
-    clearTimeout(autoTimer); // cancel auto-rotate once user interacts
-  }
-
-  // ── Arrow navigation ──
-  navRight.addEventListener("click", ()=>{ onInteract(); switchTo("music"); });
-  navLeft.addEventListener("click",  ()=>{ onInteract(); switchTo("athletic"); });
-
-  // ── Tap inactive planet to switch ──
-  pA.addEventListener("click", e=>{
-    if(active === "athletic"){
-      // Navigate to athletic
-      onInteract();
-      document.getElementById("stage").classList.add("out");
-      setTimeout(()=>{ location.href="athleticMetronome.html"; }, 380);
-    } else {
-      e.preventDefault(); onInteract(); switchTo("athletic");
+  // Strip backdrop-filter / blur AND pause the starfield while the scroller is
+  // moving; restore ~140ms after it goes idle. This is what keeps even native
+  // scroll smooth on worst-case hardware — blurring a moving background per
+  // frame is the expensive part, native scroll or not.
+  let idleTimer = null;
+  viewport.addEventListener("scroll", ()=>{
+    scheduleScales(); // grow/shrink the cards to match the new scroll position
+    if(!viewport.classList.contains("is-scrolling")){
+      viewport.classList.add("is-scrolling");
+      motionActive = true;
     }
-  });
-
-  pM.addEventListener("click", e=>{
-    if(active === "music"){
-      // Navigate to music
-      onInteract();
-      document.getElementById("stage").classList.add("out");
-      setTimeout(()=>{ location.href="musicMetronome.html"; }, 380);
-    } else {
-      e.preventDefault(); onInteract(); switchTo("music");
-    }
-  });
-
-  // ── Swipe gesture ──
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  document.getElementById("orbitViewport").addEventListener("touchstart", e=>{
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(()=>{
+      viewport.classList.remove("is-scrolling");
+      motionActive = false;
+    }, 140);
   }, {passive:true});
 
-  document.getElementById("orbitViewport").addEventListener("touchend", e=>{
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    // Only treat as horizontal swipe if horizontal movement dominates
-    if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 38){
-      onInteract();
-      if(dx < 0) switchTo("music");
-      else        switchTo("athletic");
-    }
-  }, {passive:true});
+  // ── Arrows: scroll the target card to centre; native snap finishes it. ──
+  navRight.addEventListener("click", ()=> centerCard(pM, true));
+  navLeft .addEventListener("click", ()=> centerCard(pA, true));
 
-  // ── Auto-rotate — fires once after 8s if no interaction ──
-  autoTimer = setTimeout(()=>{
-    if(!userInteracted && active === "athletic"){
-      switchTo("music");
-      // Switch back after another 6s to show both options, then stop
-      setTimeout(()=>{
-        if(!userInteracted) switchTo("athletic");
-      }, 6000);
-    }
-  }, 8000);
-
-  // ── Use ResizeObserver for reliable measurement ──────────
-  // ResizeObserver.contentRect gives LAYOUT width — unaffected by
-  // CSS transforms like scale(). This is the correct measurement.
-  const ro = new ResizeObserver(entries => {
-    const w = entries[0].contentRect.width;
-    if(w > 0 && w !== planetW){
-      planetW = w;
-      applyLayout(false);
-    }
+  // ── Card taps: active card enters its mode; inactive card scrolls to centre.
+  function enter(url){
+    document.getElementById("stage").classList.add("out");
+    setTimeout(()=>{ location.href = url; }, 380);
+  }
+  pA.addEventListener("click", ()=>{
+    if(active === "athletic") enter("athleticMetronome.html");
+    else centerCard(pA, true);
   });
-  ro.observe(pA);
-
-  // ── Recalculate on resize / rotation ─────────────────────
-  // IMPORTANT: use offsetWidth, NOT getBoundingClientRect().
-  // getBoundingClientRect() returns the SCALED width when a
-  // CSS transform:scale() is active — giving wrong measurements.
-  // offsetWidth always returns the layout width, unaffected by transforms.
-  window.addEventListener("resize", ()=>{
-    const w = pA.offsetWidth;
-    if(w > 0){ planetW = w; }
-    applyLayout(false);
+  pM.addEventListener("click", ()=>{
+    if(active === "music") enter("musicMetronome.html");
+    else centerCard(pM, true);
   });
 
-  // ── Fallback: force initial layout after 120ms ────────────
-  setTimeout(()=>{
-    if(planetW === 0){
-      planetW = pA.offsetWidth || 220;
-      applyLayout(false);
-    }
-  }, 120);
+  // ── Layout on load + on resize/rotation. Re-centre the active card so a
+  //    rotation doesn't leave it half-off. ──
+  function layout(){
+    setPadding();
+    centerCard(active === "athletic" ? pA : pM, false);
+    updateScales();
+  }
+  window.addEventListener("resize", layout);
 
+  // Initial paint: pad, then centre Athletic instantly. Two rAFs so the browser
+  // has applied the padding before we measure/scroll.
+  requestAnimationFrame(()=>{
+    setPadding();
+    requestAnimationFrame(()=>{
+      centerCard(pA, false);
+      updateScales(); // set the initial big/small sizes before first paint settles
+    });
+  });
 })();
 </script>
 </body>

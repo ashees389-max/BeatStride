@@ -301,26 +301,13 @@ html,body{
 .set-mini-row{display:flex;justify-content:space-between;font-size:8px;}
 .set-mini-row .k{color:var(--text-faint);}
 .set-mini-row .v{color:var(--text);font-family:monospace;}
-.session-note{
-  margin-top:8px;width:100%;
-  background:rgba(0,0,0,0.3);border:1px solid var(--card-border);
-  border-radius:8px;padding:7px 10px;color:var(--text);
-  font-size:10px;resize:none;outline:none;font-family:'Segoe UI',sans-serif;
-  transition:border-color 0.2s;
-}
-.session-note:focus{border-color:var(--green-border);}
-
-/* ── Session note actions row — Save Note + Delete Session ──────────
-   FIX: previously .note-save-btn used float:right (sitting alone next
-   to the textarea) while .session-delete-btn was rendered in a
-   SEPARATE block below it (right-aligned via text-align:right), with
-   a clear:both spacer div after both. Two different layout techniques
-   for two buttons meant to visually pair as one action row produced
-   inconsistent vertical alignment and padding between them.
-   Fix: both buttons now share one flex row, vertically centred, with
-   matching padding — no floats, no clear-fix hacks required. ── */
+/* ── Session actions row — Delete Session ──
+   Was previously shared with a Save Note button; that feature was
+   removed (it silently failed to persist notes). Kept as a flex row
+   with justify-content:flex-end rather than reverting to the old
+   float/text-align technique the row used before it was unified. ── */
 .session-note-actions{
-  display:flex;align-items:center;justify-content:space-between;
+  display:flex;align-items:center;justify-content:flex-end;
   gap:8px;margin-top:8px;
 }
 .session-delete-btn{
@@ -330,14 +317,6 @@ html,body{
   transition:all 0.2s;font-family:inherit;line-height:1;
 }
 .session-delete-btn:hover{background:rgba(231,76,60,0.1);border-color:rgba(231,76,60,0.6);color:#e74c3c;}
-
-.note-save-btn{
-  background:var(--green-dim);border:1px solid var(--green-border);
-  border-radius:8px;padding:7px 12px;color:var(--green);
-  font-size:9px;cursor:pointer;transition:background 0.2s;
-  font-family:inherit;line-height:1;
-}
-@media(hover:hover){.note-save-btn:hover{background:rgba(46,204,113,0.25);}}
 .history-empty{
   text-align:center;padding:40px 20px;
   font-size:13px;color:var(--text-faint);
@@ -1703,12 +1682,8 @@ function renderHistory(append=false){
         ${s.sets_skipped>0?`<div class="session-detail-row"><span class="sd-label">Sets Skipped</span><span class="sd-val">${s.sets_skipped}</span></div>`:""}
         ${s.flexible_mode_used?`<div class="session-detail-row"><span class="sd-label">Flexible Mode</span><span class="sd-val" style="color:var(--green);">ON</span></div>`:""}
         ${renderSetsMini(s)}
-        <div style="margin-top:10px;">
-          <textarea class="session-note" placeholder="Add a note…" rows="2" data-sid="${s.session_id}">${s.user_notes||""}</textarea>
-        </div>
         <div class="session-note-actions">
           <button class="session-delete-btn" onclick="deleteSession('${s.session_id}',this)">🗑 Delete Session</button>
-          <button class="note-save-btn" onclick="saveNote('${s.session_id}',this)">SAVE NOTE</button>
         </div>
       </div>`;
     list.appendChild(card);
@@ -1747,17 +1722,6 @@ function toggleSessionCard(hdr){
   const chev=hdr.querySelector(".session-chev");
   body.classList.toggle("open");
   chev.style.transform=body.classList.contains("open")?"rotate(180deg)":"";
-}
-
-function saveNote(sid,btn){
-  // FIX: Save Note now lives in .session-note-actions, a separate row
-  // from the textarea (previously it sat directly next to it, so
-  // previousElementSibling worked). Find the textarea via the shared
-  // .session-body ancestor instead, so this keeps working after the
-  // layout fix above.
-  const ta=btn.closest(".session-body").querySelector(".session-note");
-  MetStorage.updateSessionNotes(sid, ta.value);
-  showToast("Note saved ✓");
 }
 
 function renderAchievements(){
