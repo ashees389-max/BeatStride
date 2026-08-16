@@ -893,17 +893,18 @@ function beginRest(sec,setIdx){
   _restPausedAccum = 0;
   $("restCnt").textContent=sec;$("restRing").style.strokeDashoffset="251.2";updateInfo();
 
-  // Schedule native rest-end timer — the primary trigger. Runs on a
-  // THREAD_PRIORITY_AUDIO HandlerThread in native code; wakes the JS
-  // thread via resumeTimers()+evaluateJavascript() when it fires.
+  // Schedule native rest-end timer. Primary trigger is a native Handler
+  // timer running directly inside the already-alive, wake-locked session
+  // process (see BeatStrideWakeLockPlugin.scheduleRestEnd()) — it doesn't
+  // wake a suspended device or wait on an Activity resume, so it's given
+  // the TRUE exact delay here, no early-fire margin. (A secondary
+  // AlarmManager-based backup path still fires a few seconds early
+  // internally, on the native side, to cover a genuine process-kill case —
+  // _nativeRestEnd's remaining-time check above already handles that
+  // correctly regardless of which path calls it, so nothing else needs to
+  // change here for that.)
   const wl=_wakeLock();
-  // Fire the alarm 400ms early to offset Activity-resume overhead
-  // (~300-500ms from alarm fire → notification → handleOnResume()).
-  // _nativeRestEnd uses a setTimeout for the remaining fragment so
-  // the actual onRestEnd() call still lands at the correct wall-clock time.
-  // 3s lead covers deeper Doze stages (3+ min rests take ~2000ms to wake).
-  const _alarmDelayMs=Math.max(1000,sec*1000-3000);
-  if(wl)wl.scheduleRestEnd({delayMs:_alarmDelayMs,setIdx}).catch(()=>{});
+  if(wl)wl.scheduleRestEnd({delayMs:sec*1000,setIdx}).catch(()=>{});
 
   // setInterval drives the display countdown only. It also calls
   // onRestEnd() as a fallback (e.g. on desktop/web preview where the

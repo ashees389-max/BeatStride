@@ -234,6 +234,12 @@ class BeatStrideWakeLockPlugin : Plugin() {
 
     @PluginMethod
     fun scheduleRestEnd(call: PluginCall) {
+        // delayMs is now the TRUE exact rest duration (athleticMetronome.html no
+        // longer pre-adjusts it early) — the native Handler timer below uses it
+        // as-is, since that path doesn't need any lead time. Only the AlarmManager
+        // backup further down still wants a few seconds' head start, computed
+        // from this internally, since that's the only path actually waking a
+        // possibly-suspended device rather than firing inside an already-alive one.
         val delayMs = (call.getDouble("delayMs", 0.0) ?: 0.0).toLong()
         val setIdx  = call.getInt("setIdx", 0) ?: 0
 
@@ -245,11 +251,17 @@ class BeatStrideWakeLockPlugin : Plugin() {
 
         // ── PRIMARY: native Handler timer, running directly in this process ──
         // See this class's restHandler field comment and BeatStrideTimerService's
-        // file header for the full rationale. Uses the same (deliberately
-        // early-by-a-few-seconds) delayMs as the AlarmManager backup below —
-        // fireWakeUp() → evalNativeRestEnd() → JS's _nativeRestEnd() already
-        // knows how to wait out the last couple of seconds itself, so no
-        // separate timing math is needed here.
+        // file header for the full rationale. Fires at the exact requested delay —
+        // no early-fire margin needed, since this runs inside the same already-
+        // alive, wake-locked process the whole time rather than waking a
+        // suspended one. Previously this shared the AlarmManager backup's
+        // early-by-3s delay, which caused the visible "screen flashes, then a
+        // 1-2s pause before the beat actually starts" lag: the native screen-
+        // wake/notification in fireWakeUp() fired instantly, while the actual
+        // beginSet() call was deliberately held back by _nativeRestEnd's
+        // remaining-time wait to preserve the true rest duration. Firing this
+        // timer at the exact time removes that gap — remaining will already be
+        // ~0 by the time _nativeRestEnd runs, so it proceeds immediately.
         val runnable = Runnable {
             Log.d("BeatStrideWakeLock", "native Handler timer fired: setIdx=$setIdx")
             BeatStrideTimerService.fireWakeUp(context, setIdx)
@@ -296,9 +308,16 @@ class BeatStrideWakeLockPlugin : Plugin() {
             return
         }
 
+        // Fire this backup a few seconds early — covers deeper Doze stages where
+        // waking the device and getting the Service running genuinely takes real
+        // time (unlike the primary Handler path above, which needs none of that).
+        // JS's _nativeRestEnd() already knows how to wait out this lead time
+        // itself (see its remaining-time check), so the true rest duration is
+        // still preserved either way.
+        val alarmDelayMs = maxOf(1000L, delayMs - 3000L)
         try {
-            am.setAlarmClock(AlarmManager.AlarmClockInfo(System.currentTimeMillis() + delayMs, showIntent), pi)
-            Log.d("BeatStrideWakeLock", "Alarm scheduled: ${delayMs}ms")
+            am.setAlarmClock(AlarmManager.AlarmClockInfo(System.currentTimeMillis() + alarmDelayMs, showIntent), pi)
+            Log.d("BeatStrideWakeLock", "Alarm scheduled (backup): ${alarmDelayMs}ms")
         } catch (e: SecurityException) {
             // Belt-and-suspenders: covers the narrow race where permission is revoked
             // between the canScheduleExactAlarms() check above and this call.
