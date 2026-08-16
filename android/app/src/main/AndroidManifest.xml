@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+        <!-- Fired via PendingIntent.getService() from BeatStrideWakeLockPlugin.scheduleRestEnd()
+             (AlarmManager.setAlarmClock) to reliably wake the app when an athletic-mode rest
+             period ends, even with the screen off/locked. Must be declared here or the OS
+             cannot start it when the alarm fires — this was previously missing and caused a
+             crash the moment a rest-period alarm fired (i.e. right after the first interval set). -->
+        <service
+            android:name=".BeatStrideTimerService"
+            android:exported="false" />
+    </application>
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Required on Android 12+ (API 31+) to call AlarmManager.setAlarmClock(), used by
+         BeatStrideWakeLockPlugin.scheduleRestEnd() for screen-off-safe rest timers. This is a
+         "special access" permission — declaring it here does NOT auto-grant it; the user (or
+         the app, via ACTION_REQUEST_SCHEDULE_EXACT_ALARM) must still grant it in Settings.
+         Missing this entirely caused setAlarmClock() to throw an uncaught SecurityException on
+         Capacitor's plugin thread, crashing the whole app the instant the first set's rest began. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Required on Android 14+ (API 34+) for setFullScreenIntent() (used in
+         BeatStrideTimerService.showAlarmNotification) to actually behave as a full-screen
+         launch — turning the screen on and bringing the app to the foreground automatically,
+         alarm-clock style. Without this permission, Android silently downgrades a full-screen
+         intent notification to a normal (non-launching) notification instead of throwing an
+         error, which is why the alarm/notification worked but the app never auto-opened: the
+         AlarmManager alarm fired, BeatStrideTimerService ran and posted the notification
+         correctly, but neither the full-screen intent nor the same service's direct
+         startActivity() fallback were allowed to actually bring the Activity to the foreground
+         without this permission. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Diagnostic: lets BeatStrideTimerService.onStartCommand() vibrate the instant it runs,
+         as unambiguous physical proof the native alarm actually reached the service — logs on
+         this device have repeatedly been inconclusive (missing/stripped), so this sidesteps
+         that entirely. Also doubles as a real haptic cue for "rest complete" if kept long-term. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+</manifest>
