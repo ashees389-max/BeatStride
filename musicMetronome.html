@@ -1154,6 +1154,22 @@ const rampBarInfo    = document.getElementById("rampBarInfo");
 function fmtTime(s){const m=Math.floor(s/60);return m+":"+String(Math.floor(s%60)).padStart(2,"0");}
 
 function setBPM(val, updateSlider=true){
+  // ── FIX: anchor the beat-counting clock BEFORE changing tempo ──────────
+  // Without this, a mid-session BPM change (manual +1/-1/+5/-5/half/double
+  // buttons, slider, tap tempo, voice control — anything routing through
+  // this function outside the ramp-mode step-transition path) left
+  // _rampStepStartSec/_rampStepStartBeats pointing at session start. The
+  // beat-counting formula in startClock() then recomputed the ENTIRE
+  // elapsed session's beat count at the NEW bpm on the very next tick —
+  // e.g. pressing "double" 1 minute into a 120 BPM session (120 beats
+  // logged) instantly jumped the counter to 240, as if 240 BPM had been
+  // running the whole minute. _anchorRampStep() is the exact same helper
+  // ramp-mode step transitions already call for this reason (see its own
+  // doc comment) — centralizing the call here means every BPM-change path
+  // gets it automatically, not just ramp steps. Purely local bookkeeping
+  // (elapsedSec/beatCounter/clockInterval/sessionStartTs) — never touches
+  // MetEngine, so audio timing/scheduling is completely unaffected.
+  _anchorRampStep();
   currentBPM = Math.min(420,Math.max(40,Math.round(val)));
   bpmSpan.innerText = currentBPM;
   if(updateSlider) bpmSlider.value = currentBPM;
