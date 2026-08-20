@@ -1360,6 +1360,24 @@ function registerCallbacks(){
 
     // Fermata
     if(fermata.active){
+      // ── FIX: count beats on the WEB (non-native) fermata path too ──────
+      // startClock()'s tick-formula beat counter deliberately EXCLUDES
+      // loopFermata mode (it isn't driven by a steady BPM-only cadence —
+      // the fermata pauses break that assumption). The intended counting
+      // path for this mode is a direct increment per real beat, and
+      // startNativeFermata() (native Android plugin path) already does
+      // exactly that. This web-engine path — used whenever the native
+      // plugin isn't available (browser/PWA preview, or if native plugin
+      // registration ever fails on-device) — never had the equivalent,
+      // so the "Beats" counter silently stayed at 0 for the whole session
+      // even though the metronome was audibly playing and the fermata
+      // pause logic below was working correctly. This early-returns above
+      // during an active pause (_fermataInPause), matching the native
+      // path's own `if(!isRunning || inPause) return;` guard, so paused
+      // beats are correctly excluded from the count on both paths alike.
+      beatCounter++;
+      beatCountSpan.innerText = beatCounter;
+
       fermata.loopBeatCount++;
       if(fermata.loopBeatCount >= fermata.beatsPerLoop){
         fermata.inPause = true; fermata.loopBeatCount = 0;
